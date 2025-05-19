@@ -3,18 +3,17 @@ package service
 
 import (
 	"blockchain-wallet/internal/domain"
-	"blockchain-wallet/internal/repository"
 	"blockchain-wallet/internal/tron"
 	"context"
 	"time"
 )
 
 type walletService struct {
-	repo repository.WalletRepository
+	repo domain.WalletRepository
 	tron tron.Client
 }
 
-func NewWalletService(repo repository.WalletRepository, tron tron.Client) domain.WalletService {
+func NewWalletService(repo domain.WalletRepository, tron tron.Client) domain.WalletService {
 	return &walletService{
 		repo: repo,
 		tron: tron,

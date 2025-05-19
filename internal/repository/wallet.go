@@ -8,18 +8,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type WalletRepository interface {
-	Create(ctx context.Context, wallet *domain.Wallet) error
-	FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error)
-	FindByAddress(ctx context.Context, address string) (*domain.Wallet, error)
-	Update(ctx context.Context, wallet *domain.Wallet) error
-}
-
 type walletRepository struct {
 	db *gorm.DB
 }
 
-func NewWalletRepository(db *gorm.DB) WalletRepository {
+func NewWalletRepository(db *gorm.DB) domain.WalletRepository {
 	return &walletRepository{db: db}
 }
 
