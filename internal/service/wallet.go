@@ -9,11 +9,6 @@ import (
 	"time"
 )
 
-type WalletService interface {
-	CreateWallet(ctx context.Context, req domain.CreateWalletRequest) (*domain.Wallet, error)
-	GetWallets(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error)
-}
-
 type walletService struct {
 	repo repository.WalletRepository
 	tron tron.Client
