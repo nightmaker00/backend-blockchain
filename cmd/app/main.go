@@ -1,4 +1,3 @@
-// cmd/api/main.go
 package main
 
 import (
@@ -7,9 +6,14 @@ import (
     "github.com/labstack/echo/v4/middleware"
     "blockchain-wallet/internal/api"
     "blockchain-wallet/internal/config"
+    "blockchain-wallet/internal/service"
 )
 
 func main() {
+    srv := service.NewWalletService(nil, nil) // указатель на объект
+
+    handler := api.NewHandler(nil, srv) // здесь уже указатель пробрасываем как тип интерфейса, тк объект удовлетворяет интерфейсу
+
     // Загрузка конфигурации
     cfg, err := config.Load()
     if err != nil {

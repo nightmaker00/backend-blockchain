@@ -2,6 +2,7 @@
 package api
 
 import (
+	"blockchain-wallet/internal/config"
 	"blockchain-wallet/internal/domain"
 	"net/http"
 	"strconv"
@@ -9,33 +10,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Dependencies struct {
-	WalletService      domain.WalletService
-	TransactionService domain.TransactionService
+// Handler содержит все зависимости, необходимые для работы API
+type Handler struct {
+	Service UseCases
 }
 
-func NewDependencies(cfg *Config) *Dependencies {
+// NewHandler создает новый экземпляр зависимостей
+func NewHandler(cfg *config.Config, service UseCases) *Handler {
 	// Здесь будет инициализация сервисов
-	return &Dependencies{}
+	return &Handler{
+		Service: service,
+	}
 }
 
-type TransactionHandler struct {
-	transactionService domain.TransactionService
-}
-
-func NewTransactionHandler(ts domain.TransactionService) *TransactionHandler {
-	return &TransactionHandler{transactionService: ts}
-}
-
-// WalletHandler обрабатывает запросы, связанные с кошельками
-type WalletHandler struct {
-	walletService domain.WalletService
-}
-
-func NewWalletHandler(ws domain.WalletService) *WalletHandler {
-	return &WalletHandler{walletService: ws}
-}
-
+// getIntParam получает целочисленный параметр из запроса с значением по умолчанию
 func getIntParam(c echo.Context, name string, defaultValue int) int {
 	val := c.QueryParam(name)
 	if val == "" {
@@ -47,13 +35,14 @@ func getIntParam(c echo.Context, name string, defaultValue int) int {
 	return defaultValue
 }
 
-func (h *WalletHandler) CreateWallet(c echo.Context) error {
+// CreateWallet создает новый кошелек
+func (h *Handler) CreateWallet(c echo.Context) error {
 	var req domain.CreateWalletRequest
 	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		return echo.NewHTTPError(http.StatusBadRequest, "Неверное тело запроса")
 	}
 
-	wallet, err := h.walletService.CreateWallet(c.Request().Context(), req)
+	wallet, err := h.Service.CreateWallet(c.Request().Context(), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -61,7 +50,8 @@ func (h *WalletHandler) CreateWallet(c echo.Context) error {
 	return c.JSON(http.StatusCreated, wallet)
 }
 
-func (h *WalletHandler) GetWallets(c echo.Context) error {
+// GetWallets получает список кошельков с фильтрацией
+func (h *Handler) GetWallets(c echo.Context) error {
 	filter := domain.WalletFilter{
 		WalletType: c.QueryParam("wallet_type"),
 		Status:     c.QueryParam("status"),
@@ -69,7 +59,7 @@ func (h *WalletHandler) GetWallets(c echo.Context) error {
 		Limit:      getIntParam(c, "limit", 10),
 	}
 
-	wallets, pagination, err := h.walletService.GetWallets(c.Request().Context(), filter)
+	wallets, pagination, err := h.Service.GetWallets(c.Request().Context(), filter)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -80,13 +70,14 @@ func (h *WalletHandler) GetWallets(c echo.Context) error {
 	})
 }
 
-func (h *TransactionHandler) CreateTransaction(c echo.Context) error {
+// CreateTransaction создает новую транзакцию
+func (h *Handler) CreateTransaction(c echo.Context) error {
 	var req domain.CreateTransactionRequest
 	if err := c.Bind(&req); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		return echo.NewHTTPError(http.StatusBadRequest, "Неверное тело запроса")
 	}
 
-	transaction, err := h.transactionService.CreateTransaction(c.Request().Context(), req)
+	transaction, err := h.Service.CreateTransaction(c.Request().Context(), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -94,7 +85,8 @@ func (h *TransactionHandler) CreateTransaction(c echo.Context) error {
 	return c.JSON(http.StatusCreated, transaction)
 }
 
-func (h *TransactionHandler) GetTransactions(c echo.Context) error {
+// GetTransactions получает список транзакций с фильтрацией
+func (h *Handler) GetTransactions(c echo.Context) error {
 	filter := domain.TransactionFilter{
 		FromAddress: c.QueryParam("from_address"),
 		ToAddress:   c.QueryParam("to_address"),
@@ -103,7 +95,7 @@ func (h *TransactionHandler) GetTransactions(c echo.Context) error {
 		Limit:       getIntParam(c, "limit", 10),
 	}
 
-	transactions, pagination, err := h.transactionService.GetTransactions(c.Request().Context(), filter)
+	transactions, pagination, err := h.Service.GetTransactions(c.Request().Context(), filter)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
@@ -114,16 +106,13 @@ func (h *TransactionHandler) GetTransactions(c echo.Context) error {
 	})
 }
 
-// Регистрация маршрутов
-func RegisterRoutes(e *echo.Echo, deps *Dependencies) {
-	walletHandler := NewWalletHandler(deps.WalletService)
-	transactionHandler := NewTransactionHandler(deps.TransactionService)
-
+// RegisterRoutes регистрирует все маршруты API
+func RegisterRoutes(e *echo.Echo, handler *Handler) {
 	v1 := e.Group("/api/v1")
 	{
-		v1.POST("/wallets", walletHandler.CreateWallet)
-		v1.GET("/wallets", walletHandler.GetWallets)
-		v1.POST("/transactions", transactionHandler.CreateTransaction)
-		v1.GET("/transactions", transactionHandler.GetTransactions)
+		v1.POST("/wallets", handler.CreateWallet)
+		v1.GET("/wallets", handler.GetWallets)
+		v1.POST("/transactions", handler.CreateTransaction)
+		v1.GET("/transactions", handler.GetTransactions)
 	}
 }

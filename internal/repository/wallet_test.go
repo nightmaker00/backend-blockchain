@@ -12,8 +12,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// TestWalletRepository_Create тестирует создание кошелька в репозитории
 func TestWalletRepository_Create(t *testing.T) {
-	// Arrange
+	// Подготовка
 	db := setupTestDB(t)
 	repo := NewWalletRepository(db)
 	ctx := context.Background()
@@ -26,13 +27,13 @@ func TestWalletRepository_Create(t *testing.T) {
 		CreatedAt:  time.Now(),
 	}
 
-	// Act
+	// Действие
 	err := repo.Create(ctx, wallet)
 
-	// Assert
+	// Проверка
 	assert.NoError(t, err)
 
-	// Verify
+	// Верификация
 	var savedWallet domain.Wallet
 	err = db.First(&savedWallet, "address = ?", wallet.Address).Error
 	assert.NoError(t, err)
@@ -42,13 +43,14 @@ func TestWalletRepository_Create(t *testing.T) {
 	assert.Equal(t, wallet.Status, savedWallet.Status)
 }
 
+// TestWalletRepository_FindAll тестирует получение списка кошельков с фильтрацией
 func TestWalletRepository_FindAll(t *testing.T) {
-	// Arrange
+	// Подготовка
 	db := setupTestDB(t)
 	repo := NewWalletRepository(db)
 	ctx := context.Background()
 
-	// Create test data
+	// Создание тестовых данных
 	wallets := []domain.Wallet{
 		{
 			Address:    "test_address_1",
@@ -78,10 +80,10 @@ func TestWalletRepository_FindAll(t *testing.T) {
 		Limit:      10,
 	}
 
-	// Act
+	// Действие
 	foundWallets, pagination, err := repo.FindAll(ctx, filter)
 
-	// Assert
+	// Проверка
 	assert.NoError(t, err)
 	assert.Len(t, foundWallets, 2)
 	assert.Equal(t, int64(2), pagination.Total)
@@ -89,6 +91,7 @@ func TestWalletRepository_FindAll(t *testing.T) {
 	assert.Equal(t, 10, pagination.Limit)
 }
 
+// setupTestDB создает тестовую базу данных в памяти
 func setupTestDB(t *testing.T) *gorm.DB {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)

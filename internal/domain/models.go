@@ -1,8 +1,6 @@
-// internal/domain/models.go
 package domain
 
 import (
-	"context"
 	"time"
 )
 
@@ -37,18 +35,6 @@ type Pagination struct {
 	Page  int `json:"page"`
 	Limit int `json:"limit"`
 	Total int `json:"total"`
-}
-
-type WalletService interface {
-	CreateWallet(ctx context.Context, req CreateWalletRequest) (*Wallet, error)
-	GetWallets(ctx context.Context, filter WalletFilter) ([]Wallet, Pagination, error)
-}
-
-type WalletRepository interface {
-	Create(ctx context.Context, wallet *Wallet) error
-	FindAll(ctx context.Context, filter WalletFilter) ([]Wallet, Pagination, error)
-	FindByAddress(ctx context.Context, address string) (*Wallet, error)
-	Update(ctx context.Context, wallet *Wallet) error
 }
 
 type WalletsResponse struct {

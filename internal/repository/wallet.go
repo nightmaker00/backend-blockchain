@@ -1,4 +1,3 @@
-// internal/repository/wallet.go
 package repository
 
 import (
@@ -8,18 +7,22 @@ import (
 	"gorm.io/gorm"
 )
 
+// walletRepository реализует интерфейс WalletRepository
 type walletRepository struct {
 	db *gorm.DB
 }
 
-func NewWalletRepository(db *gorm.DB) domain.WalletRepository {
+// NewWalletRepository создает новый репозиторий кошельков
+func NewWalletRepository(db *gorm.DB) *walletRepository {
 	return &walletRepository{db: db}
 }
 
+// Create сохраняет новый кошелек в базу данных
 func (r *walletRepository) Create(ctx context.Context, wallet *domain.Wallet) error {
 	return r.db.WithContext(ctx).Create(wallet).Error
 }
 
+// FindAll возвращает список кошельков с учетом фильтрации и пагинации
 func (r *walletRepository) FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
 	var wallets []domain.Wallet
 	var total int64
@@ -51,6 +54,7 @@ func (r *walletRepository) FindAll(ctx context.Context, filter domain.WalletFilt
 	return wallets, pagination, err
 }
 
+// FindByAddress находит кошелек по его адресу
 func (r *walletRepository) FindByAddress(ctx context.Context, address string) (*domain.Wallet, error) {
 	var wallet domain.Wallet
 	err := r.db.WithContext(ctx).Where("address = ?", address).First(&wallet).Error
@@ -60,6 +64,7 @@ func (r *walletRepository) FindByAddress(ctx context.Context, address string) (*
 	return &wallet, nil
 }
 
+// Update обновляет информацию о кошельке
 func (r *walletRepository) Update(ctx context.Context, wallet *domain.Wallet) error {
 	return r.db.WithContext(ctx).Save(wallet).Error
 }

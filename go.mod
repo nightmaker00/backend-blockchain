@@ -1,10 +1,11 @@
 module blockchain-wallet
 
-go 1.24.0
+go 1.21
 
 require (
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/stretchr/testify v1.10.0
+	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.26.1
 )
 
@@ -26,5 +27,4 @@ require (
 	golang.org/x/text v0.22.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	gorm.io/driver/sqlite v1.5.7 // indirect
 )

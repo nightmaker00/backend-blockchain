@@ -1,7 +1,6 @@
 package domain
 
 import (
-	"context"
 	"time"
 )
 
@@ -29,8 +28,3 @@ type TransactionFilter struct {
 	Limit       int    `json:"limit"`
 }
 
-type TransactionService interface {
-	// Добавьте методы, которые вам нужны
-	CreateTransaction(ctx context.Context, req CreateTransactionRequest) (*Transaction, error)
-	GetTransactions(ctx context.Context, filter TransactionFilter) ([]Transaction, Pagination, error)
-}

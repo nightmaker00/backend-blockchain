@@ -2,6 +2,7 @@ package service
 
 import (
 	"blockchain-wallet/internal/domain"
+	"blockchain-wallet/pkg/blockchain/tron"
 	"context"
 	"testing"
 	"time"
@@ -53,12 +54,12 @@ func (m *MockTronClient) GetBalance(ctx context.Context, address string) (float6
 	return args.Get(0).(float64), args.Error(1)
 }
 
-func (m *MockTronClient) GetTransactionStatus(ctx context.Context, txID string) (*domain.Transaction, error) {
+func (m *MockTronClient) GetTransactionStatus(ctx context.Context, txID string) (*tron.Transaction, error) {
 	args := m.Called(ctx, txID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*domain.Transaction), args.Error(1)
+	return args.Get(0).(*tron.Transaction), args.Error(1)
 }
 
 func (m *MockTronClient) SendTransaction(ctx context.Context, fromAddress, toAddress string, amount float64) (string, error) {
@@ -66,9 +67,9 @@ func (m *MockTronClient) SendTransaction(ctx context.Context, fromAddress, toAdd
 	return args.String(0), args.Error(1)
 }
 
-// Пример теста
+// TestWalletService_CreateWallet тестирует создание кошелька
 func TestWalletService_CreateWallet(t *testing.T) {
-	// Arrange
+	// Подготовка
 	mockRepo := new(MockWalletRepository)
 	mockTron := new(MockTronClient)
 	service := NewWalletService(mockRepo, mockTron)
@@ -88,10 +89,10 @@ func TestWalletService_CreateWallet(t *testing.T) {
 			w.Status == "active"
 	})).Return(nil)
 
-	// Act
+	// Действие
 	wallet, err := service.CreateWallet(context.Background(), req)
 
-	// Assert
+	// Проверка
 	assert.NoError(t, err)
 	assert.NotNil(t, wallet)
 	assert.Equal(t, expectedAddress, wallet.Address)
@@ -103,8 +104,9 @@ func TestWalletService_CreateWallet(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+// TestWalletService_GetWallets тестирует получение списка кошельков
 func TestWalletService_GetWallets(t *testing.T) {
-	// Arrange
+	// Подготовка
 	mockRepo := new(MockWalletRepository)
 	mockTron := new(MockTronClient)
 	service := NewWalletService(mockRepo, mockTron)
@@ -141,10 +143,10 @@ func TestWalletService_GetWallets(t *testing.T) {
 
 	mockRepo.On("FindAll", mock.Anything, filter).Return(expectedWallets, expectedPagination, nil)
 
-	// Act
+	// Действие
 	wallets, pagination, err := service.GetWallets(context.Background(), filter)
 
-	// Assert
+	// Проверка
 	assert.NoError(t, err)
 	assert.Equal(t, expectedWallets, wallets)
 	assert.Equal(t, expectedPagination, pagination)
@@ -152,8 +154,9 @@ func TestWalletService_GetWallets(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
+// TestWalletService_CreateWallet_Error тестирует обработку ошибки при создании кошелька
 func TestWalletService_CreateWallet_Error(t *testing.T) {
-	// Arrange
+	// Подготовка
 	mockRepo := new(MockWalletRepository)
 	mockTron := new(MockTronClient)
 	service := NewWalletService(mockRepo, mockTron)
@@ -165,10 +168,10 @@ func TestWalletService_CreateWallet_Error(t *testing.T) {
 
 	mockTron.On("CreateWallet", mock.Anything).Return("", assert.AnError)
 
-	// Act
+	// Действие
 	wallet, err := service.CreateWallet(context.Background(), req)
 
-	// Assert
+	// Проверка
 	assert.Error(t, err)
 	assert.Nil(t, wallet)
 	assert.Equal(t, assert.AnError, err)
