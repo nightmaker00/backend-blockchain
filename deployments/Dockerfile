@@ -1,5 +1,5 @@
 # Используем официальный образ Go
-FROM golang:1.21-alpine
+FROM golang:1.22-alpine
 
 # Устанавливаем необходимые зависимости
 RUN apk add --no-cache gcc musl-dev

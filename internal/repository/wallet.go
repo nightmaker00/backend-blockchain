@@ -3,68 +3,144 @@ package repository
 import (
 	"blockchain-wallet/internal/domain"
 	"context"
+	"log"
 
-	"gorm.io/gorm"
+	"github.com/jmoiron/sqlx"
 )
 
-// walletRepository реализует интерфейс WalletRepository
-type walletRepository struct {
-	db *gorm.DB
+type WalletRepository struct {
+	db *sqlx.DB
 }
 
-// NewWalletRepository создает новый репозиторий кошельков
-func NewWalletRepository(db *gorm.DB) *walletRepository {
-	return &walletRepository{db: db}
-}
-
-// Create сохраняет новый кошелек в базу данных
-func (r *walletRepository) Create(ctx context.Context, wallet *domain.Wallet) error {
-	return r.db.WithContext(ctx).Create(wallet).Error
-}
-
-// FindAll возвращает список кошельков с учетом фильтрации и пагинации
-func (r *walletRepository) FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
-	var wallets []domain.Wallet
-	var total int64
-
-	query := r.db.WithContext(ctx).Model(&domain.Wallet{})
-
-	if filter.WalletType != "" {
-		query = query.Where("wallet_type = ?", filter.WalletType)
-	}
-	if filter.Status != "" {
-		query = query.Where("status = ?", filter.Status)
-	}
-
-	err := query.Count(&total).Error
+func NewWalletRepository(db *sqlx.DB) *WalletRepository {
+	// Проверяем подключение и схему
+	var tableName string
+	err := db.Get(&tableName, `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'wallet'`)
 	if err != nil {
+		log.Printf("Error checking table existence: %v", err)
+	} else {
+		log.Printf("Found table: %s", tableName)
+	}
+
+	return &WalletRepository{
+		db: db,
+	}
+}
+
+func (r *WalletRepository) Create(ctx context.Context, wallet *domain.Wallet) error {
+	// Логируем SQL запрос
+	query := `
+		INSERT INTO wallet (public_key, private_key, address, seed_phrase, kind, is_active, created_at, updated_at, username)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+	log.Printf("Executing query: %s", query)
+	log.Printf("With values: %+v", wallet)
+
+	_, err := r.db.ExecContext(ctx, query,
+		wallet.PublicKey,
+		wallet.PrivateKey,
+		wallet.Address,
+		wallet.SeedPhrase,
+		wallet.Kind,
+		wallet.IsActive,
+		wallet.CreatedAt,
+		wallet.UpdatedAt,
+		wallet.Username,
+	)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		return err
+	}
+	return nil
+}
+
+func (r *WalletRepository) FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
+	query := `
+		SELECT 
+			encode(public_key, 'hex') as public_key,
+			encode(private_key, 'hex') as private_key,
+			encode(address, 'hex') as address,
+			encode(seed_phrase, 'hex') as seed_phrase,
+			kind,
+			is_active,
+			created_at,
+			updated_at,
+			username
+		FROM wallet
+		LIMIT $1 OFFSET $2
+	`
+	offset := (filter.Page - 1) * filter.Limit
+
+	log.Printf("Executing query: %s with params: limit=%d, offset=%d", query, filter.Limit, offset)
+
+	// Проверяем структуру таблицы
+	var columns []string
+	err := r.db.SelectContext(ctx, &columns, `
+		SELECT column_name 
+		FROM information_schema.columns 
+		WHERE table_name = 'wallet' 
+		ORDER BY ordinal_position
+	`)
+	if err != nil {
+		log.Printf("Error getting table structure: %v", err)
+	} else {
+		log.Printf("Table columns: %v", columns)
+	}
+
+	var wallets []domain.Wallet
+	err = r.db.SelectContext(ctx, &wallets, query,
+		filter.Limit,
+		offset,
+	)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
 		return nil, domain.Pagination{}, err
 	}
 
-	err = query.Offset((filter.Page - 1) * filter.Limit).
-		Limit(filter.Limit).
-		Find(&wallets).Error
+	// Получаем общее количество записей
+	var total int
+	countQuery := `SELECT COUNT(*) FROM wallet`
+	err = r.db.GetContext(ctx, &total, countQuery)
+	if err != nil {
+		log.Printf("Error getting total count: %v", err)
+		return nil, domain.Pagination{}, err
+	}
 
 	pagination := domain.Pagination{
 		Page:  filter.Page,
 		Limit: filter.Limit,
-		Total: int(total),
+		Total: total,
 	}
 
-	return wallets, pagination, err
+	log.Printf("Found %d wallets", len(wallets))
+	return wallets, pagination, nil
 }
 
-// FindByAddress находит кошелек по его адресу
-func (r *walletRepository) FindByAddress(ctx context.Context, address string) (*domain.Wallet, error) {
+func (r *WalletRepository) FindByAddress(ctx context.Context, address string) (*domain.Wallet, error) {
+	query := `SELECT * FROM wallet WHERE address = $1`
 	var wallet domain.Wallet
-	err := r.db.WithContext(ctx).Where("address = ?", address).First(&wallet).Error
+	err := r.db.GetContext(ctx, &wallet, query, address)
 	if err != nil {
 		return nil, err
 	}
 	return &wallet, nil
 }
 
-// Update обновляет информацию о кошельке
-func (r *walletRepository) Update(ctx context.Context, wallet *domain.Wallet) error {
-	return r.db.WithContext(ctx).Save(wallet).Error
+func (r *WalletRepository) Update(ctx context.Context, wallet *domain.Wallet) error {
+	query := `
+		UPDATE wallet
+		SET private_key = $1,
+			seed_phrase = $2,
+			is_active = $3,
+			updated_at = $4
+		WHERE address = $5
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		wallet.PrivateKey,
+		wallet.SeedPhrase,
+		wallet.IsActive,
+		wallet.UpdatedAt,
+		wallet.Address,
+	)
+	return err
 }

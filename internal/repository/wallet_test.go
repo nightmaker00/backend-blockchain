@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
-	"gorm.io/gorm"
 )
 
 // TestWalletRepository_Create тестирует создание кошелька в репозитории
@@ -20,11 +20,15 @@ func TestWalletRepository_Create(t *testing.T) {
 	ctx := context.Background()
 
 	wallet := &domain.Wallet{
+		PublicKey:  "test_address",
+		PrivateKey: "test_private_key",
 		Address:    "test_address",
-		WalletType: "tron",
-		Name:       "Test Wallet",
-		Status:     "active",
+		SeedPhrase: "test_seed_phrase",
+		Kind:       domain.WalletKindRegular,
+		IsActive:   true,
 		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Username:   "test_username",
 	}
 
 	// Действие
@@ -35,12 +39,14 @@ func TestWalletRepository_Create(t *testing.T) {
 
 	// Верификация
 	var savedWallet domain.Wallet
-	err = db.First(&savedWallet, "address = ?", wallet.Address).Error
+	err = db.GetContext(ctx, &savedWallet, "SELECT * FROM wallet WHERE public_key = $1", wallet.PublicKey)
 	assert.NoError(t, err)
-	assert.Equal(t, wallet.Address, savedWallet.Address)
-	assert.Equal(t, wallet.WalletType, savedWallet.WalletType)
-	assert.Equal(t, wallet.Name, savedWallet.Name)
-	assert.Equal(t, wallet.Status, savedWallet.Status)
+	assert.Equal(t, wallet.PublicKey, savedWallet.PublicKey)
+	assert.Equal(t, wallet.PrivateKey, savedWallet.PrivateKey)
+	assert.Equal(t, wallet.SeedPhrase, savedWallet.SeedPhrase)
+	assert.Equal(t, wallet.Kind, savedWallet.Kind)
+	assert.Equal(t, wallet.IsActive, savedWallet.IsActive)
+	assert.Equal(t, wallet.Username, savedWallet.Username)
 }
 
 // TestWalletRepository_FindAll тестирует получение списка кошельков с фильтрацией
@@ -53,18 +59,26 @@ func TestWalletRepository_FindAll(t *testing.T) {
 	// Создание тестовых данных
 	wallets := []domain.Wallet{
 		{
+			PublicKey:  "test_address_1",
+			PrivateKey: "test_private_key_1",
 			Address:    "test_address_1",
-			WalletType: "tron",
-			Name:       "Test Wallet 1",
-			Status:     "active",
+			SeedPhrase: "test_seed_phrase_1",
+			Kind:       domain.WalletKindRegular,
+			IsActive:   true,
 			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+			Username:   "test_username_1",
 		},
 		{
+			PublicKey:  "test_address_2",
+			PrivateKey: "test_private_key_2",
 			Address:    "test_address_2",
-			WalletType: "tron",
-			Name:       "Test Wallet 2",
-			Status:     "active",
+			SeedPhrase: "test_seed_phrase_2",
+			Kind:       domain.WalletKindRegular,
+			IsActive:   true,
 			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+			Username:   "test_username_2",
 		},
 	}
 
@@ -74,10 +88,10 @@ func TestWalletRepository_FindAll(t *testing.T) {
 	}
 
 	filter := domain.WalletFilter{
-		WalletType: "tron",
-		Status:     "active",
-		Page:       1,
-		Limit:      10,
+		Kind:     "regular",
+		IsActive: true,
+		Page:     1,
+		Limit:    10,
 	}
 
 	// Действие
@@ -86,17 +100,72 @@ func TestWalletRepository_FindAll(t *testing.T) {
 	// Проверка
 	assert.NoError(t, err)
 	assert.Len(t, foundWallets, 2)
-	assert.Equal(t, int64(2), pagination.Total)
+	assert.Equal(t, 2, pagination.Total)
 	assert.Equal(t, 1, pagination.Page)
 	assert.Equal(t, 10, pagination.Limit)
 }
 
-// setupTestDB создает тестовую базу данных в памяти
-func setupTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+// TestWalletRepository_FindByAddress тестирует поиск кошелька по адресу
+func TestWalletRepository_FindByAddress(t *testing.T) {
+	// Подготовка
+	db := setupTestDB(t)
+	repo := NewWalletRepository(db)
+	ctx := context.Background()
+
+	wallet := &domain.Wallet{
+		PublicKey:  "test_address",
+		PrivateKey: "test_private_key",
+		Address:    "test_address",
+		SeedPhrase: "test_seed_phrase",
+		Kind:       domain.WalletKindRegular,
+		IsActive:   true,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Username:   "test_username",
+	}
+
+	err := repo.Create(ctx, wallet)
 	require.NoError(t, err)
 
-	err = db.AutoMigrate(&domain.Wallet{})
+	// Действие
+	foundWallet, err := repo.FindByAddress(ctx, wallet.Address)
+
+	// Проверка
+	assert.NoError(t, err)
+	assert.NotNil(t, foundWallet)
+	assert.Equal(t, wallet.Address, foundWallet.Address)
+	assert.Equal(t, wallet.PublicKey, foundWallet.PublicKey)
+	assert.Equal(t, wallet.PrivateKey, foundWallet.PrivateKey)
+	assert.Equal(t, wallet.SeedPhrase, foundWallet.SeedPhrase)
+	assert.Equal(t, wallet.Kind, foundWallet.Kind)
+	assert.Equal(t, wallet.IsActive, foundWallet.IsActive)
+	assert.Equal(t, wallet.Username, foundWallet.Username)
+}
+
+// setupTestDB создает тестовую базу данных
+func setupTestDB(t *testing.T) *sqlx.DB {
+	// Используем тестовую базу данных PostgreSQL
+	db, err := sqlx.Connect("postgres", "host=localhost port=5432 user=postgres password=postgres dbname=blockchain_wallet_test sslmode=disable")
+	require.NoError(t, err)
+
+	// Очищаем таблицу перед тестами
+	_, err = db.Exec("DROP TABLE IF EXISTS wallet")
+	require.NoError(t, err)
+
+	// Создаем таблицу
+	_, err = db.Exec(`
+		CREATE TABLE wallet (
+			public_key VARCHAR(255) PRIMARY KEY,
+			private_key VARCHAR(255) NOT NULL,
+			address VARCHAR(255) NOT NULL,
+			seed_phrase TEXT NOT NULL,
+			kind VARCHAR(50) NOT NULL,
+			is_active BOOLEAN NOT NULL DEFAULT true,
+			created_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL,
+			username VARCHAR(255) NOT NULL UNIQUE
+		)
+	`)
 	require.NoError(t, err)
 
 	return db

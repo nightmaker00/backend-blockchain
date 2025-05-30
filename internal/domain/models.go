@@ -4,31 +4,35 @@ import (
 	"time"
 )
 
-type WalletType string
+type WalletKind string
 
 const (
-	WalletTypeRegular WalletType = "regular"
-	WalletTypeBank    WalletType = "bank"
+	WalletKindRegular WalletKind = "regular"
+	WalletKindBank    WalletKind = "bank"
 )
 
 type Wallet struct {
-	Address    string    `json:"address"`
-	WalletType string    `json:"wallet_type"`
-	Name       string    `json:"name"`
-	Status     string    `json:"status"`
-	CreatedAt  time.Time `json:"created_at"`
+	PublicKey  string     `json:"public_key" db:"public_key"`
+	PrivateKey string     `json:"private_key" db:"private_key"`
+	Address    string     `json:"address" db:"address"`
+	SeedPhrase string     `json:"seed_phrase" db:"seed_phrase"`
+	Kind       WalletKind `json:"kind" db:"kind"`
+	IsActive   bool       `json:"is_active" db:"is_active"`
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at" db:"updated_at"`
+	Username   string     `json:"username" db:"username"`
 }
 
 type CreateWalletRequest struct {
-	WalletType string `json:"wallet_type"`
-	Name       string `json:"name"`
+	Kind     string `json:"kind"`
+	Username string `json:"username"`
 }
 
 type WalletFilter struct {
-	WalletType string `json:"wallet_type"`
-	Status     string `json:"status"`
-	Page       int    `json:"page"`
-	Limit      int    `json:"limit"`
+	Kind     string `json:"kind"`
+	IsActive bool   `json:"is_active"`
+	Page     int    `json:"page"`
+	Limit    int    `json:"limit"`
 }
 
 type Pagination struct {
