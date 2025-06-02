@@ -1,8 +1,8 @@
 package worker
 
 import (
-	"blockchain-wallet/internal/domain"
 	"blockchain-wallet/internal/api"
+	"blockchain-wallet/internal/domain"
 	"context"
 	"sync"
 	"time"
@@ -120,8 +120,11 @@ func (w *TransactionWorker) checkTransactionStatus(ctx context.Context) {
 					continue
 				}
 
-				// Если транзакция подтверждена 20 раз, удаляем её из мапы
-				if status == "confirmed" && tx.Confirmations >= 20 {
+				// Удаляем транзакцию из мапы если:
+				// 1. Она подтверждена 20 раз
+				// 2. Она завершилась с ошибкой
+				// 3. Она в процессе обработки (processing) - оставляем в мапе
+				if status == "confirmed" && tx.Confirmations >= 20 || status == "failed" {
 					w.mu.Lock()
 					delete(w.pendingTxs, hash)
 					w.mu.Unlock()
