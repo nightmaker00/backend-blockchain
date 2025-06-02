@@ -49,6 +49,46 @@ func TestWalletRepository_Create(t *testing.T) {
 	assert.Equal(t, wallet.Username, savedWallet.Username)
 }
 
+// TestWalletRepository_Create_DuplicateUsername тестирует создание кошелька с дубликатом имени пользователя
+func TestWalletRepository_Create_DuplicateUsername(t *testing.T) {
+	// Подготовка
+	db := setupTestDB(t)
+	repo := NewWalletRepository(db)
+	ctx := context.Background()
+
+	wallet1 := &domain.Wallet{
+		PublicKey:  "test_address_1",
+		PrivateKey: "test_private_key_1",
+		Address:    "test_address_1",
+		SeedPhrase: "test_seed_phrase_1",
+		Kind:       domain.WalletKindRegular,
+		IsActive:   true,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Username:   "test_username",
+	}
+
+	wallet2 := &domain.Wallet{
+		PublicKey:  "test_address_2",
+		PrivateKey: "test_private_key_2",
+		Address:    "test_address_2",
+		SeedPhrase: "test_seed_phrase_2",
+		Kind:       domain.WalletKindRegular,
+		IsActive:   true,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+		Username:   "test_username",
+	}
+
+	// Действие
+	err1 := repo.Create(ctx, wallet1)
+	err2 := repo.Create(ctx, wallet2)
+
+	// Проверка
+	assert.NoError(t, err1)
+	assert.Error(t, err2)
+}
+
 // TestWalletRepository_FindAll тестирует получение списка кошельков с фильтрацией
 func TestWalletRepository_FindAll(t *testing.T) {
 	// Подготовка
@@ -80,6 +120,17 @@ func TestWalletRepository_FindAll(t *testing.T) {
 			UpdatedAt:  time.Now(),
 			Username:   "test_username_2",
 		},
+		{
+			PublicKey:  "test_address_3",
+			PrivateKey: "test_private_key_3",
+			Address:    "test_address_3",
+			SeedPhrase: "test_seed_phrase_3",
+			Kind:       domain.WalletKindRegular,
+			IsActive:   false,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
+			Username:   "test_username_3",
+		},
 	}
 
 	for _, w := range wallets {
@@ -87,22 +138,60 @@ func TestWalletRepository_FindAll(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	filter := domain.WalletFilter{
-		Kind:     "regular",
-		IsActive: true,
-		Page:     1,
-		Limit:    10,
+	tests := []struct {
+		name     string
+		filter   domain.WalletFilter
+		expected int
+	}{
+		{
+			name: "all wallets",
+			filter: domain.WalletFilter{
+				Page:  1,
+				Limit: 10,
+			},
+			expected: 3,
+		},
+		{
+			name: "active wallets",
+			filter: domain.WalletFilter{
+				IsActive: true,
+				Page:     1,
+				Limit:    10,
+			},
+			expected: 2,
+		},
+		{
+			name: "regular wallets",
+			filter: domain.WalletFilter{
+				Kind:  "regular",
+				Page:  1,
+				Limit: 10,
+			},
+			expected: 3,
+		},
+		{
+			name: "pagination",
+			filter: domain.WalletFilter{
+				Page:  1,
+				Limit: 2,
+			},
+			expected: 2,
+		},
 	}
 
-	// Действие
-	foundWallets, pagination, err := repo.FindAll(ctx, filter)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Действие
+			foundWallets, pagination, err := repo.FindAll(ctx, tt.filter)
 
-	// Проверка
-	assert.NoError(t, err)
-	assert.Len(t, foundWallets, 2)
-	assert.Equal(t, 2, pagination.Total)
-	assert.Equal(t, 1, pagination.Page)
-	assert.Equal(t, 10, pagination.Limit)
+			// Проверка
+			assert.NoError(t, err)
+			assert.Len(t, foundWallets, tt.expected)
+			assert.Equal(t, 3, pagination.Total)
+			assert.Equal(t, tt.filter.Page, pagination.Page)
+			assert.Equal(t, tt.filter.Limit, pagination.Limit)
+		})
+	}
 }
 
 // TestWalletRepository_FindByAddress тестирует поиск кошелька по адресу
@@ -111,7 +200,7 @@ func TestWalletRepository_FindByAddress(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewWalletRepository(db)
 	ctx := context.Background()
-	// Dommain/Wallet Struct
+
 	wallet := &domain.Wallet{
 		PublicKey:  "test_address",
 		PrivateKey: "test_private_key",
@@ -127,19 +216,48 @@ func TestWalletRepository_FindByAddress(t *testing.T) {
 	err := repo.Create(ctx, wallet)
 	require.NoError(t, err)
 
-	// Действие
-	foundWallet, err := repo.FindByAddress(ctx, wallet.Address)
+	tests := []struct {
+		name          string
+		address       string
+		shouldExist   bool
+		expectedError bool
+	}{
+		{
+			name:          "existing wallet",
+			address:       wallet.Address,
+			shouldExist:   true,
+			expectedError: false,
+		},
+		{
+			name:          "non-existing wallet",
+			address:       "non_existing_address",
+			shouldExist:   false,
+			expectedError: true,
+		},
+	}
 
-	// Проверка
-	assert.NoError(t, err)
-	assert.NotNil(t, foundWallet)
-	assert.Equal(t, wallet.Address, foundWallet.Address)
-	assert.Equal(t, wallet.PublicKey, foundWallet.PublicKey)
-	assert.Equal(t, wallet.PrivateKey, foundWallet.PrivateKey)
-	assert.Equal(t, wallet.SeedPhrase, foundWallet.SeedPhrase)
-	assert.Equal(t, wallet.Kind, foundWallet.Kind)
-	assert.Equal(t, wallet.IsActive, foundWallet.IsActive)
-	assert.Equal(t, wallet.Username, foundWallet.Username)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Действие
+			foundWallet, err := repo.FindByAddress(ctx, tt.address)
+
+			// Проверка
+			if tt.expectedError {
+				assert.Error(t, err)
+				assert.Nil(t, foundWallet)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, foundWallet)
+				assert.Equal(t, wallet.Address, foundWallet.Address)
+				assert.Equal(t, wallet.PublicKey, foundWallet.PublicKey)
+				assert.Equal(t, wallet.PrivateKey, foundWallet.PrivateKey)
+				assert.Equal(t, wallet.SeedPhrase, foundWallet.SeedPhrase)
+				assert.Equal(t, wallet.Kind, foundWallet.Kind)
+				assert.Equal(t, wallet.IsActive, foundWallet.IsActive)
+				assert.Equal(t, wallet.Username, foundWallet.Username)
+			}
+		})
+	}
 }
 
 // setupTestDB создает тестовую базу данных
