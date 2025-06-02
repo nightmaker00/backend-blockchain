@@ -1,8 +1,8 @@
 package service
 
 import (
-	"context"
 	"blockchain-wallet/internal/domain"
+	"context"
 )
 
 type WalletRepository interface {

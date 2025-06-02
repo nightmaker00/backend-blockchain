@@ -172,3 +172,16 @@ func (s *walletService) GetTransactions(ctx context.Context, filter domain.Trans
 func (w *walletService) GetWallets(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
 	return w.repo.FindAll(ctx, filter)
 }
+
+func (s *walletService) GetWalletTransactions(ctx context.Context, address string) ([]domain.Transaction, error) {
+	filter := domain.TransactionFilter{
+		FromAddress: address,
+		Page:        1,
+		Limit:       1000,
+	}
+	txs, _, err := s.repo.GetTransactions(ctx, filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get wallet transactions: %w", err)
+	}
+	return txs, nil
+}

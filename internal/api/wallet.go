@@ -19,4 +19,5 @@ type WalletService interface {
 	GetTransactionStatus(ctx context.Context, txID string) (string, error)
 	GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error)
 	GetWallets(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error)
+	GetWalletTransactions(ctx context.Context, address string) ([]domain.Transaction, error)
 }
