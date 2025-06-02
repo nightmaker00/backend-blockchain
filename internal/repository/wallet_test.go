@@ -111,7 +111,7 @@ func TestWalletRepository_FindByAddress(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewWalletRepository(db)
 	ctx := context.Background()
-
+	// Dommain/Wallet Struct
 	wallet := &domain.Wallet{
 		PublicKey:  "test_address",
 		PrivateKey: "test_private_key",

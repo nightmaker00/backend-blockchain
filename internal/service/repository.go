@@ -10,4 +10,6 @@ type WalletRepository interface {
 	FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error)
 	FindByAddress(ctx context.Context, address string) (*domain.Wallet, error)
 	Update(ctx context.Context, wallet *domain.Wallet) error
+	GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error)
+	GetTransactionStatus(ctx context.Context, txID string) (string, error)
 }

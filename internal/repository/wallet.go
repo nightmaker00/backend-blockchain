@@ -3,6 +3,7 @@ package repository
 import (
 	"blockchain-wallet/internal/domain"
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/jmoiron/sqlx"
@@ -142,5 +143,76 @@ func (r *WalletRepository) Update(ctx context.Context, wallet *domain.Wallet) er
 		wallet.UpdatedAt,
 		wallet.Address,
 	)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update wallet: %w", err)
+	}
+	return nil
+}
+
+func (r *WalletRepository) GetTransactionStatus(ctx context.Context, txID string) (string, error) {
+	query := `SELECT status FROM transaction WHERE hash = $1`
+	var status string
+	err := r.db.GetContext(ctx, &status, query, txID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get transaction status: %w", err)
+	}
+	return status, nil
+}
+
+func (r *WalletRepository) GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error) {
+	query := `
+		SELECT 
+			hash,
+			from_address,
+			to_address,
+			amount,
+			status,
+			confirmations,
+			created_at,
+			updated_at
+		FROM transaction
+		WHERE ($1 = '' OR from_address = $1)
+		AND ($2 = '' OR to_address = $2)
+		AND ($3 = '' OR status = $3)
+		LIMIT $4 OFFSET $5
+	`
+	offset := (filter.Page - 1) * filter.Limit
+
+	var transactions []domain.Transaction
+	err := r.db.SelectContext(ctx, &transactions, query,
+		filter.FromAddress,
+		filter.ToAddress,
+		filter.Status,
+		filter.Limit,
+		offset,
+	)
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("failed to get transactions: %w", err)
+	}
+
+	// Получаем общее количество записей
+	var total int
+	countQuery := `
+		SELECT COUNT(*) 
+		FROM transaction 
+		WHERE ($1 = '' OR from_address = $1)
+		AND ($2 = '' OR to_address = $2)
+		AND ($3 = '' OR status = $3)
+	`
+	err = r.db.GetContext(ctx, &total, countQuery,
+		filter.FromAddress,
+		filter.ToAddress,
+		filter.Status,
+	)
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("failed to get total count: %w", err)
+	}
+
+	pagination := domain.Pagination{
+		Page:  filter.Page,
+		Limit: filter.Limit,
+		Total: total,
+	}
+
+	return transactions, pagination, nil
 }

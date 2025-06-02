@@ -116,7 +116,7 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 		Address:    addressStr,
 		SeedPhrase: mnemonic,
 		Kind:       kind,
-		IsActive:   true,
+		IsActive:   false,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 		Username:   req.Username,
@@ -125,7 +125,6 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 	if err := s.repo.Create(ctx, wallet); err != nil {
 		return nil, fmt.Errorf("failed to save wallet: %w", err)
 	}
-	
 
 	return wallet, nil
 }
@@ -146,15 +145,28 @@ func (s *walletService) SendTransaction(ctx context.Context, req domain.CreateTr
 		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
 
+	// Активируем кошелек после успешной транзакции
+	if !wallet.IsActive {
+		wallet.IsActive = true
+		wallet.UpdatedAt = time.Now()
+		if err := s.repo.Update(ctx, wallet); err != nil {
+			return nil, fmt.Errorf("failed to activate wallet: %w", err)
+		}
+	}
+
 	return domain.ToDomainTransaction(tx), nil
 }
 
 func (s *walletService) GetTransactionStatus(ctx context.Context, txID string) (string, error) {
-	status, err := s.tc.GetTransactionStatus(ctx, txID)
+	status, err := s.repo.GetTransactionStatus(ctx, txID)
 	if err != nil {
 		return "", fmt.Errorf("failed to get transaction status: %w", err)
 	}
 	return status, nil
+}
+
+func (s *walletService) GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error) {
+	return s.repo.GetTransactions(ctx, filter)
 }
 
 func (w *walletService) GetWallets(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
