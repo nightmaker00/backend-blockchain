@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -47,7 +48,7 @@ func (t *TronClient) GetBalance(ctx context.Context, address string) (float64, e
 		return 0, fmt.Errorf("failed to create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	httpReq.Header.Set(os.Getenv("TRON_NODE_API_KEY"), t.apiKey)
 
 	// Отправляем запрос
 	resp, err := t.httpClient.Do(httpReq)
@@ -108,7 +109,7 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	httpReq.Header.Set(os.Getenv("TRON_NODE_API_KEY"), t.apiKey)
 
 	// Отправляем запрос
 	resp, err := t.httpClient.Do(httpReq)
@@ -179,7 +180,7 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		return nil, fmt.Errorf("failed to create broadcast request: %w", err)
 	}
 	broadcastHttpReq.Header.Set("Content-Type", "application/json")
-	broadcastHttpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	broadcastHttpReq.Header.Set(os.Getenv("TRON_NODE_API_KEY"), t.apiKey)
 
 	broadcastResp, err := t.httpClient.Do(broadcastHttpReq)
 	if err != nil {

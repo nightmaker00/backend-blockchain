@@ -45,6 +45,9 @@ func (h *Handler) CreateWallet(c echo.Context) error {
 
 	wallet, err := h.wallet.CreateWallet(c.Request().Context(), req)
 	if err != nil {
+		if err.Error() == "username is required" || err.Error() == "kind is required" {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
@@ -147,11 +150,11 @@ func (h *Handler) GetTransactionStatus(c echo.Context) error {
 func RegisterRoutes(e *echo.Echo, handler *Handler) {
 	v1 := e.Group("/api/v1")
 	{
-		v1.POST("/wallets", handler.CreateWallet)// Создание кошелька
-		v1.GET("/wallets", handler.GetWallets)// Получение списка кошельков
-		v1.GET("/wallets/:address/balance", handler.GetBalance)// Получение баланса кошелька
-		v1.POST("/transaction/send", handler.SendTransaction)// Отправка транзакции
-		v1.GET("/transactions", handler.GetTransactions)// Получение списка транзакций
-		v1.GET("/transactions/:tx_id/status", handler.GetTransactionStatus)// Получение статуса транзакции
+		v1.POST("/wallets", handler.CreateWallet)                           // Создание кошелька
+		v1.GET("/wallets", handler.GetWallets)                              // Получение списка кошельков
+		v1.GET("/wallets/:address/balance", handler.GetBalance)             // Получение баланса кошелька
+		v1.POST("/transaction/send", handler.SendTransaction)               // Отправка транзакции
+		v1.GET("/transactions", handler.GetTransactions)                    // Получение списка транзакций
+		v1.GET("/transactions/:tx_id/status", handler.GetTransactionStatus) // Получение статуса транзакции
 	}
 }

@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"time"
 
 	"blockchain-wallet/internal/domain"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/mr-tron/base58"
 	"github.com/tyler-smith/go-bip32"
 	"github.com/tyler-smith/go-bip39"
 	"golang.org/x/crypto/sha3"
@@ -28,6 +28,14 @@ func NewWalletService(tc TronClient, repo WalletRepository) *walletService {
 }
 
 func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalletRequest) (*domain.Wallet, error) {
+	// Проверяем обязательные поля
+	if req.Username == "" {
+		return nil, fmt.Errorf("username is required")
+	}
+	if req.Kind == "" {
+		return nil, fmt.Errorf("kind is required")
+	}
+
 	// Генерируем энтропию (128 бит = 12 слов)
 	entropy, err := bip39.NewEntropy(128)
 	if err != nil {
@@ -101,14 +109,11 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 	// Добавляем контрольную сумму к адресу
 	finalAddress := append(tronAddress, checksum...)
 
-	// Конвертируем в base64
-	addressStr := base64.StdEncoding.EncodeToString(finalAddress)
+	// Конвертируем в base58
+	addressStr := base58.Encode(finalAddress)
 
 	// Определяем тип кошелька
-	kind := domain.WalletKindRegular
-	if req.Kind != "" {
-		kind = domain.WalletKind(req.Kind)
-	}
+	kind := domain.WalletKind(req.Kind)
 
 	wallet := &domain.Wallet{
 		PublicKey:  string(publicKeyBytes),
