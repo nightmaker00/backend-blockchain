@@ -6,11 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"crypto/sha256"
 
 	"github.com/ethereum/go-ethereum/crypto"
 )
+
 
 type TronClient struct {
 	httpClient *http.Client
@@ -26,60 +29,49 @@ func NewClient(httpClient *http.Client, apiNodeKey, apiNodeURL string) *TronClie
 	}
 }
 
-func (t *TronClient) GetBalance(ctx context.Context, address string) (float64, error) {
-	// Создаем запрос на получение баланса
-	req := tronRequest{
-		JSONRPC: "2.0",
-		Method:  "wallet/getaccount",
-		Params: map[string]interface{}{
-			"address": address,
-		},
-		ID: 1,
+func (t *TronClient) GetBalance(ctx context.Context, address string) (*WalletBalance, error) {
+	url := fmt.Sprintf("https://apilist.tronscanapi.com/api/account/tokens?address=%s&start=0&limit=50&hidden=0&show=0&sortType=0&sortBy=0", address)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	reqBody, err := json.Marshal(req)
+	resp, err := t.httpClient.Do(req)
 	if err != nil {
-		return 0, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	// Создаем HTTP запрос
-	httpReq, err := http.NewRequest("POST", t.apiURL, bytes.NewBuffer(reqBody))
-	if err != nil {
-		return 0, fmt.Errorf("failed to create request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set(os.Getenv("TRON_NODE_API_KEY"), t.apiKey)
-
-	// Отправляем запрос
-	resp, err := t.httpClient.Do(httpReq)
-	if err != nil {
-		return 0, fmt.Errorf("failed to send request: %w", err)
+		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 500 {
-		return 0, fmt.Errorf("server error: received status code %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var tronResp tronResponse
-	if err := json.NewDecoder(resp.Body).Decode(&tronResp); err != nil {
-		return 0, fmt.Errorf("failed to decode response: %w", err)
+	var tronscanResp TronScanTokensResponse
+
+	if err := json.NewDecoder(resp.Body).Decode(&tronscanResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if tronResp.Error != nil {
-		return 0, fmt.Errorf("tron api error: %s", tronResp.Error.Message)
+	balance := &WalletBalance{
+		TRXBalance: 0,
+		USDTBalance: 0,
 	}
-
-	// Декодируем ответ
-	var account struct {
-		Balance int64 `json:"balance"`
+	
+	for _, token := range tronscanResp.Data {
+		switch token.TokenID {
+			case "_": // TRX token
+			  if token.Quantity.Float64() > 0 {
+				balance.TRXBalance = token.Quantity.Float64()
+			  }
+			case USDTContractAddress: // USDT token
+			  if token.Quantity.Float64() > 0 {
+				balance.USDTBalance = token.Quantity.Float64()
+			  }
+		}
 	}
-	if err := json.Unmarshal(tronResp.Result, &account); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal account: %w", err)
-	}
-
-	// Конвертируем из SUN в TRX (1 TRX = 1,000,000 SUN)
-	return float64(account.Balance) / 1_000_000, nil
+	return balance, nil	
 }
 
 func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress string, amount float64, privateKey string) (*Transaction, error) {
@@ -154,7 +146,9 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		return nil, fmt.Errorf("failed to decode raw data: %w", err)
 	}
 
-	signature, err := crypto.Sign(rawData, ecdsaPrivateKey)
+	hash := sha256.Sum256(rawData)
+	signature, err := crypto.Sign(hash[:], ecdsaPrivateKey)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign transaction: %w", err)
 	}

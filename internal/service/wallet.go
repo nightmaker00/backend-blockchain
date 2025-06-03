@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"blockchain-wallet/internal/domain"
-
+	"blockchain-wallet/pkg/blockchain/tron"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mr-tron/base58"
 	"github.com/tyler-smith/go-bip32"
@@ -134,7 +134,7 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 	return wallet, nil
 }
 
-func (s *walletService) GetBalance(ctx context.Context, address string) (float64, error) {
+func (s *walletService) GetBalance(ctx context.Context, address string) (*tron.WalletBalance, error) {
 	return s.tc.GetBalance(ctx, address)
 }
 
