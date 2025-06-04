@@ -57,19 +57,19 @@ func (r *WalletRepository) Create(ctx context.Context, wallet *domain.Wallet) er
 
 func (r *WalletRepository) FindAll(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
 	query := `
-		SELECT 
-			encode(public_key, 'hex') as public_key,
-			encode(private_key, 'hex') as private_key,
-			encode(address, 'hex') as address,
-			encode(seed_phrase, 'hex') as seed_phrase,
-			kind,
-			is_active,
-			created_at,
-			updated_at,
-			username
-		FROM wallet
-		LIMIT $1 OFFSET $2
-	`
+    SELECT 
+      public_key,
+      private_key,
+      address,
+      seed_phrase,
+      kind,
+      is_active,
+      created_at,
+      updated_at,
+      username
+    FROM wallet
+    LIMIT $1 OFFSET $2
+  `
 	offset := (filter.Page - 1) * filter.Limit
 
 	log.Printf("Executing query: %s with params: limit=%d, offset=%d", query, filter.Limit, offset)
@@ -160,59 +160,62 @@ func (r *WalletRepository) GetTransactionStatus(ctx context.Context, txID string
 }
 
 func (r *WalletRepository) GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error) {
-	query := `
-		SELECT 
-			hash,
-			from_address,
-			to_address,
-			amount,
-			status,
-			confirmations,
-			created_at,
-			updated_at
-		FROM transaction
-		WHERE ($1 = '' OR from_address = $1)
-		AND ($2 = '' OR to_address = $2)
-		AND ($3 = '' OR status = $3)
-		LIMIT $4 OFFSET $5
-	`
-	offset := (filter.Page - 1) * filter.Limit
+    query := `
+        SELECT 
+            hash,
+            from_address,
+            to_address,
+            amount,
+            status,
+            confirmations,
+            created_at,
+            updated_at
+        FROM transaction
+        WHERE 
+            ($1::text = '' OR from_address = $1::text)
+            AND ($2::text = '' OR to_address = $2::text)
+            AND ($3::transaction_status = '' OR status = $3::transaction_status)
+        ORDER BY created_at DESC
+        LIMIT $4 OFFSET $5
+    `
+    offset := (filter.Page - 1) * filter.Limit
 
-	var transactions []domain.Transaction
-	err := r.db.SelectContext(ctx, &transactions, query,
-		filter.FromAddress,
-		filter.ToAddress,
-		filter.Status,
-		filter.Limit,
-		offset,
-	)
-	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("failed to get transactions: %w", err)
-	}
+    var transactions []domain.Transaction
+    err := r.db.SelectContext(ctx, &transactions, query,
+        filter.FromAddress,
+        filter.ToAddress,
+        filter.Status,
+        filter.Limit,
+        offset,
+    )
+    if err != nil {
+        return nil, domain.Pagination{}, fmt.Errorf("failed to get transactions: %w", err)
+    }
 
-	// Получаем общее количество записей
-	var total int
-	countQuery := `
-		SELECT COUNT(*) 
-		FROM transaction 
-		WHERE ($1 = '' OR from_address = $1)
-		AND ($2 = '' OR to_address = $2)
-		AND ($3 = '' OR status = $3)
-	`
-	err = r.db.GetContext(ctx, &total, countQuery,
-		filter.FromAddress,
-		filter.ToAddress,
-		filter.Status,
-	)
-	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("failed to get total count: %w", err)
-	}
+    // Получаем общее количество записей
+    var total int
+    countQuery := `
+        SELECT COUNT(*) 
+        FROM transaction 
+        WHERE 
+            ($1::text = '' OR from_address = $1::text)
+            AND ($2::text = '' OR to_address = $2::text)
+            AND ($3::transaction_status = '' OR status = $3::transaction_status)
+    `
+    err = r.db.GetContext(ctx, &total, countQuery,
+        filter.FromAddress,
+        filter.ToAddress,
+        filter.Status,
+    )
+    if err != nil {
+        return nil, domain.Pagination{}, fmt.Errorf("failed to get total count: %w", err)
+    }
 
-	pagination := domain.Pagination{
-		Page:  filter.Page,
-		Limit: filter.Limit,
-		Total: total,
-	}
+    pagination := domain.Pagination{
+        Page:  filter.Page,
+        Limit: filter.Limit,
+        Total: total,
+    }
 
-	return transactions, pagination, nil
+    return transactions, pagination, nil
 }

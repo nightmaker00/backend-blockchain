@@ -45,3 +45,4 @@ type WalletsResponse struct {
 	Wallets    []Wallet   `json:"wallets"`
 	Pagination Pagination `json:"pagination"`
 }
+

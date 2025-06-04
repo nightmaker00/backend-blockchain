@@ -5,23 +5,6 @@ import (
 	"strconv"
 )
 
-type tronRequest struct {
-	JSONRPC string      `json:"jsonrpc"`
-	Method  string      `json:"method"`
-	Params  interface{} `json:"params"`
-	ID      int         `json:"id"`
-}
-
-type tronResponse struct {
-	JSONRPC string          `json:"jsonrpc"`
-	ID      int             `json:"id"`
-	Result  json.RawMessage `json:"result"`
-	Error   *struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
-}
-
 type Transaction struct {
 	Visible bool   `json:"visible"`
 	TxID    string `json:"txID"`
@@ -103,3 +86,40 @@ type WalletBalance struct {
 const (
 	USDTContractAddress = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
 )
+
+type TokenType string
+
+const (
+  TokenTypeTRX  TokenType = "TRX"
+  TokenTypeUSDT TokenType = "USDT"
+)
+
+type TokenConfig struct {
+  ContractAddress string
+  Decimals        int
+}
+
+var TokenConfigs = map[TokenType]TokenConfig{
+  TokenTypeTRX: {
+    ContractAddress: "", 
+    Decimals:        6,  
+  },
+  TokenTypeUSDT: {
+    ContractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+    Decimals:        6,
+  },
+}
+
+type TRC20Transaction struct {
+	Visible          bool     `json:"visible"`
+	TxID             string   `json:"txID"`
+	ContractAddress  string   `json:"contract_address"`
+	FunctionSelector string   `json:"function_selector"`
+	Parameter        string   `json:"parameter"`
+	FeeLimit         int64    `json:"fee_limit"`
+	CallValue        int64    `json:"call_value"`
+	OwnerAddress     string   `json:"owner_address"`
+	RawDataHex       string   `json:"raw_data_hex"`
+	Signature        []string `json:"signature"`
+  }
+  

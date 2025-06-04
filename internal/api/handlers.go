@@ -81,6 +81,11 @@ func (h *Handler) SendTransaction(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Неверное тело запроса")
 	}
 
+	// Валидация типа токена
+	if req.TokenType != "TRX" && req.TokenType != "USDT" {
+		return echo.NewHTTPError(http.StatusBadRequest, "invalid token type. Must be either TRX or USDT")
+	}
+
 	transaction, err := h.wallet.SendTransaction(c.Request().Context(), req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())

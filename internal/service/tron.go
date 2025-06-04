@@ -7,5 +7,5 @@ import (
 
 type TronClient interface {
 	GetBalance(ctx context.Context, address string) (*tronlib.WalletBalance, error)
-	SendTransaction(ctx context.Context, fromAddress, toAddress string, amount float64, privateKey string) (*tronlib.Transaction, error)
+	SendToken(ctx context.Context, fromAddress, toAddress string, amount float64, privateKey string, tokenType tronlib.TokenType) (interface{}, error)
 }
