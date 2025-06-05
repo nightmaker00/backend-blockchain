@@ -54,7 +54,11 @@ func main() {
 	// Инициализация клиента Tron
 	hc := &http.Client{}
 	
-	tcl := tronlib.NewClient(hc, os.Getenv("TRON_NODE_API_KEY"), os.Getenv("TRON_NODE_URL"))
+	tcl := tronlib.NewClient(hc, 
+		os.Getenv("TRON_NODE_API_KEY"), 
+		os.Getenv("TRON_NODE_URL"),
+		os.Getenv("TRON_SCAN_API_KEY"),
+		os.Getenv("TRON_SCAN_URL"))
 
 	// Инициализация сервисов
 	walletService := service.NewWalletService(tcl, walletRepo)

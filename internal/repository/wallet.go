@@ -159,8 +159,8 @@ func (r *WalletRepository) GetTransactionStatus(ctx context.Context, txID string
 	return status, nil
 }
 
-func (r *WalletRepository) GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error) {
-    query := `
+func (r *WalletRepository) GetTransactions(ctx context.Context, address string, pagination *domain.Pagination) ([]domain.Transaction, domain.Pagination, error) {
+	query := `
         SELECT 
             hash,
             from_address,
@@ -173,49 +173,59 @@ func (r *WalletRepository) GetTransactions(ctx context.Context, filter domain.Tr
         FROM transaction
         WHERE 
             ($1::text = '' OR from_address = $1::text)
-            AND ($2::text = '' OR to_address = $2::text)
-            AND ($3::transaction_status = '' OR status = $3::transaction_status)
         ORDER BY created_at DESC
-        LIMIT $4 OFFSET $5
+        LIMIT $2 OFFSET $3
     `
-    offset := (filter.Page - 1) * filter.Limit
 
-    var transactions []domain.Transaction
-    err := r.db.SelectContext(ctx, &transactions, query,
-        filter.FromAddress,
-        filter.ToAddress,
-        filter.Status,
-        filter.Limit,
-        offset,
-    )
-    if err != nil {
-        return nil, domain.Pagination{}, fmt.Errorf("failed to get transactions: %w", err)
-    }
+	var transactions []domain.Transaction
+	err := r.db.SelectContext(ctx, &transactions, query,
+		address,
+		pagination.Limit,
+		pagination.Page,
+	)
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("failed to get transactions: %w", err)
+	}
 
-    // Получаем общее количество записей
-    var total int
-    countQuery := `
+	// Получаем общее количество записей
+	var total int
+	countQuery := `
         SELECT COUNT(*) 
         FROM transaction 
         WHERE 
             ($1::text = '' OR from_address = $1::text)
-            AND ($2::text = '' OR to_address = $2::text)
-            AND ($3::transaction_status = '' OR status = $3::transaction_status)
     `
-    err = r.db.GetContext(ctx, &total, countQuery,
-        filter.FromAddress,
-        filter.ToAddress,
-        filter.Status,
-    )
-    if err != nil {
-        return nil, domain.Pagination{}, fmt.Errorf("failed to get total count: %w", err)
-    }
+	err = r.db.GetContext(ctx, &total, countQuery,
+		address,
+	)
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("failed to get total count: %w", err)
+	}
 
-    pagination := domain.Pagination{
-        Page:  filter.Page,
-        Limit: filter.Limit,
-        Total: total,
-    }
+	pg := domain.Pagination{
+		Page:  pagination.Page,
+		Limit: pagination.Limit,
+		Total: total,
+	}
 
-    return transactions, pagination, nil
+	return transactions, pg, nil
+}
+
+func (r *WalletRepository) SaveTransaction(ctx context.Context, trx domain.Transaction) error {
+	query := `INSERT INTO transaction (hash, from_address, to_address, amount, status, confirmations, created_at, updated_at)
+	values ($1, $2, $3, $4, $5, 0, now(), now())`
+
+	_, err := r.db.ExecContext(ctx, query,
+		trx.Hash,
+		trx.FromAddress,
+		trx.ToAddress,
+		trx.Amount,
+		"pending",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to save transaction; err = %w", err)
+	}
+
+	return nil
+
 }

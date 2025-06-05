@@ -59,7 +59,7 @@ func (h *Handler) GetWallets(c echo.Context) error {
 	filter := domain.WalletFilter{
 		Kind:     c.QueryParam("kind"),
 		IsActive: strings.EqualFold("true", c.QueryParam("is_active")),
-		Page:     getIntParam(c, "page", 1),
+		Page:     getIntParam(c, "page", 0),
 		Limit:    getIntParam(c, "limit", 10),
 	}
 
@@ -95,23 +95,25 @@ func (h *Handler) SendTransaction(c echo.Context) error {
 }
 
 // GetTransactions получает список транзакций с фильтрацией
-func (h *Handler) GetTransactions(c echo.Context) error {
-	filter := domain.TransactionFilter{
-		FromAddress: c.QueryParam("from_address"),
-		ToAddress:   c.QueryParam("to_address"),
-		Status:      c.QueryParam("status"),
-		Page:        getIntParam(c, "page", 1),
-		Limit:       getIntParam(c, "limit", 10),
+func (h *Handler) GetWalletTransactions(c echo.Context) error {
+	address := c.Param("address")
+	if address == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Address is required")
 	}
 
-	transactions, pagination, err := h.wallet.GetTransactions(c.Request().Context(), filter)
+	pg := &domain.Pagination{
+		Limit: getIntParam(c, "limit", 10),
+		Page:  getIntParam(c, "page", 0),
+	}
+
+	transactions, p, err := h.wallet.GetWalletTransactions(c.Request().Context(), address, pg)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"transactions": transactions,
-		"pagination":   pagination,
+		"pagination":   p,
 	})
 }
 
@@ -159,7 +161,7 @@ func RegisterRoutes(e *echo.Echo, handler *Handler) {
 		v1.GET("/wallets", handler.GetWallets)                              // Получение списка кошельков
 		v1.GET("/wallets/:address/balance", handler.GetBalance)             // Получение баланса кошелька
 		v1.POST("/transaction/send", handler.SendTransaction)               // Отправка транзакции
-		v1.GET("/transactions", handler.GetTransactions)                    // Получение списка транзакций
+		v1.GET("/:address/transactions", handler.GetWalletTransactions)     // Получение списка транзакций
 		v1.GET("/transactions/:tx_id/status", handler.GetTransactionStatus) // Получение статуса транзакции
 	}
 }

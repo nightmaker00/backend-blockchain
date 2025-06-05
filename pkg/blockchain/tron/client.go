@@ -18,24 +18,34 @@ import (
 
 type TronClient struct {
 	httpClient *http.Client
-	apiURL     string
-	apiKey     string
+	apiNodeURL string
+	apiNodeKey string
+	scanURL    string
+	scanKey    string
 }
 
-func NewClient(httpClient *http.Client, apiNodeKey, apiNodeURL string) *TronClient {
+func NewClient(httpClient *http.Client, apiNodeKey, apiNodeURL, scanKey, scanURL string) *TronClient {
 	if apiNodeURL != "" && !strings.HasPrefix(apiNodeURL, "http://") && !strings.HasPrefix(apiNodeURL, "https://") {
 		apiNodeURL = "https://" + apiNodeURL
 	}
 
+	// if scanURL != "" && !strings.HasPrefix(scanURL, "http://") && !strings.HasPrefix(scanURL, "https://") {
+	// 	scanURL = "https://" + scanURL
+	// }
+
 	return &TronClient{
 		httpClient: httpClient,
-		apiURL:     apiNodeURL,
-		apiKey:     apiNodeKey,
+		apiNodeURL: apiNodeURL,
+		apiNodeKey: apiNodeKey,
+		scanURL:    scanURL,
+		scanKey:    scanKey,
 	}
 }
 
 func (t *TronClient) GetBalance(ctx context.Context, address string) (*WalletBalance, error) {
-	url := fmt.Sprintf("https://apilist.tronscanapi.com/api/account/tokens?address=%s&start=0&limit=4&hidden=0&show=0&sortType=0&sortBy=0", address)
+	fmt.Printf("------------------here-------------------; address = %s\n", address)
+
+	url := fmt.Sprintf("%s/account/tokens?address=%s&start=0&limit=4&hidden=0&show=0&sortType=0&sortBy=0", t.scanURL, address)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -86,6 +96,7 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		"owner_address": fromAddress,
 		"to_address":    toAddress,
 		"amount":        amountInSun,
+		"visible":       true,
 	}
 
 	reqBody, err := json.Marshal(createTxReq)
@@ -93,16 +104,17 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	createURL := t.apiURL + "/wallet/createtransaction"
+	createURL := t.apiNodeURL + "/wallet/createtransaction"
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", createURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	if t.apiKey != "" {
-		httpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
-	}
+	httpReq.Header.Add("accept", "application/json")
+	httpReq.Header.Add("content-type", "application/json")
+	// if t.apiNodeKey != "" {
+	// 	httpReq.Header.Set("TRON-PRO-API-KEY", t.apiNodeKey)
+	// }
 
 	resp, err := t.httpClient.Do(httpReq)
 	if err != nil {
@@ -148,7 +160,7 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 		return nil, fmt.Errorf("failed to marshal broadcast request: %w", err)
 	}
 
-	broadcastURL := t.apiURL + "/wallet/broadcasttransaction"
+	broadcastURL := t.apiNodeURL + "/wallet/broadcasttransaction"
 	broadcastHttpReq, err := http.NewRequestWithContext(ctx, "POST", broadcastURL, bytes.NewBuffer(broadcastBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create broadcast request: %w", err)
@@ -156,8 +168,8 @@ func (t *TronClient) SendTransaction(ctx context.Context, fromAddress, toAddress
 
 	broadcastHttpReq.Header.Set("Content-Type", "application/json")
 
-	if t.apiKey != "" {
-		broadcastHttpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	if t.apiNodeKey != "" {
+		broadcastHttpReq.Header.Set("TRON-PRO-API-KEY", t.apiNodeKey)
 	}
 
 	broadcastResp, err := t.httpClient.Do(broadcastHttpReq)
@@ -243,15 +255,15 @@ func (t *TronClient) SendTRC20Token(ctx context.Context, fromAddress, toAddress 
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	triggerURL := t.apiURL + "/wallet/triggersmartcontract"
+	triggerURL := t.apiNodeURL + "/wallet/triggersmartcontract"
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", triggerURL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
-	if t.apiKey != "" {
-		httpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	if t.apiNodeKey != "" {
+		httpReq.Header.Set("TRON-PRO-API-KEY", t.apiNodeKey)
 	}
 
 	resp, err := t.httpClient.Do(httpReq)
@@ -320,15 +332,15 @@ func (t *TronClient) SendTRC20Token(ctx context.Context, fromAddress, toAddress 
 		return nil, fmt.Errorf("failed to marshal broadcast request: %w", err)
 	}
 
-	broadcastURL := t.apiURL + "/wallet/broadcasttransaction"
+	broadcastURL := t.apiNodeURL + "/wallet/broadcasttransaction"
 	broadcastHttpReq, err := http.NewRequestWithContext(ctx, "POST", broadcastURL, bytes.NewBuffer(broadcastBody))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create broadcast request: %w", err)
 	}
 
 	broadcastHttpReq.Header.Set("Content-Type", "application/json")
-	if t.apiKey != "" {
-		broadcastHttpReq.Header.Set("TRON-PRO-API-KEY", t.apiKey)
+	if t.apiNodeKey != "" {
+		broadcastHttpReq.Header.Set("TRON-PRO-API-KEY", t.apiNodeKey)
 	}
 
 	broadcastResp, err := t.httpClient.Do(broadcastHttpReq)

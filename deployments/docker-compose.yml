@@ -27,6 +27,27 @@ services:
       postgres:
         condition: service_healthy
 
+  api:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - POSTGRES_HOST=localhost
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=blockchain_wallet
+      - POSTGRES_SSLMODE=disable
+      - TRON_NODE_API_KEY=2761fda4-d31e-4475-a4b7-f3ac2b86f66e
+      - TRON_NODE_URL=https://api.shasta.trongrid.io
+      - TRON_SCAN_API_KEY=e584273a-4a8e-45f9-a62c-ec7b03394fbb
+      - TRON_SCAN_URL=https://shastapi.tronscan.org/api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   postgres_data:
 

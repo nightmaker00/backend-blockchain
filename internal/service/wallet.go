@@ -1,13 +1,14 @@
 package service
 
 import (
-	"context"
-	"crypto/sha256"
-	"fmt"
-	"time"
-	"encoding/hex"
 	"blockchain-wallet/internal/domain"
 	"blockchain-wallet/pkg/blockchain/tron"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"time"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mr-tron/base58"
 	"github.com/tyler-smith/go-bip32"
@@ -125,8 +126,7 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 		Username:   req.Username,
-	  }
-	
+	}
 
 	if err := s.repo.Create(ctx, wallet); err != nil {
 		return nil, fmt.Errorf("failed to save wallet: %w", err)
@@ -142,46 +142,49 @@ func (s *walletService) GetBalance(ctx context.Context, address string) (*tron.W
 func (s *walletService) SendTransaction(ctx context.Context, req domain.CreateTransactionRequest) (*domain.Transaction, error) {
 	wallet, err := s.repo.FindByAddress(ctx, req.FromAddress)
 	if err != nil {
-	  return nil, fmt.Errorf("failed to find wallet: %w", err)
+		return nil, fmt.Errorf("failed to find wallet: %w", err)
 	}
-  
+
 	tx, err := s.tc.SendToken(ctx, req.FromAddress, req.ToAddress, req.Amount, wallet.PrivateKey, req.TokenType)
 	if err != nil {
-	  return nil, fmt.Errorf("failed to send transaction: %w", err)
+		return nil, fmt.Errorf("failed to send transaction: %w", err)
 	}
-  
+
 	var domainTx *domain.Transaction
 	switch v := tx.(type) {
 	case *tron.Transaction:
-	  domainTx = domain.ToDomainTransaction(v)
+		domainTx = domain.ToDomainTransaction(v)
 	case *tron.TRC20Transaction:
-	  // Для TRC20 транзакций создаем domain транзакцию из TxID
-	  domainTx = &domain.Transaction{
-		Hash:          v.TxID,
-		FromAddress:   req.FromAddress,
-		ToAddress:     req.ToAddress,
-		Amount:        req.Amount,
-		Status:        "pending",
-		Confirmations: 0,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	  }
+		// Для TRC20 транзакций создаем domain транзакцию из TxID
+		domainTx = &domain.Transaction{
+			Hash:          v.TxID,
+			FromAddress:   req.FromAddress,
+			ToAddress:     req.ToAddress,
+			Amount:        req.Amount,
+			Status:        "pending",
+			Confirmations: 0,
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
 	default:
-	  return nil, fmt.Errorf("unexpected transaction type: %T", tx)
+		return nil, fmt.Errorf("unexpected transaction type: %T", tx)
 	}
-  
+
+	if err := s.repo.SaveTransaction(ctx, *domainTx); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+
 	// Активируем кошелек после успешной транзакции
 	if !wallet.IsActive {
-	  wallet.IsActive = true
-	  wallet.UpdatedAt = time.Now()
-	  if err := s.repo.Update(ctx, wallet); err != nil {
-		return nil, fmt.Errorf("failed to activate wallet: %w", err)
-	  }
+		wallet.IsActive = true
+		wallet.UpdatedAt = time.Now()
+		if err := s.repo.Update(ctx, wallet); err != nil {
+			return nil, fmt.Errorf("failed to activate wallet: %w", err)
+		}
 	}
-  
+
 	return domainTx, nil
 }
-  
 
 func (s *walletService) GetTransactionStatus(ctx context.Context, txID string) (string, error) {
 	status, err := s.repo.GetTransactionStatus(ctx, txID)
@@ -191,23 +194,20 @@ func (s *walletService) GetTransactionStatus(ctx context.Context, txID string) (
 	return status, nil
 }
 
-func (s *walletService) GetTransactions(ctx context.Context, filter domain.TransactionFilter) ([]domain.Transaction, domain.Pagination, error) {
-	return s.repo.GetTransactions(ctx, filter)
+// TODO implement
+func (s *walletService) GetTransactions(ctx context.Context, filter domain.Pagination) ([]domain.Transaction, domain.Pagination, error) {
+	return nil, domain.Pagination{}, nil
 }
 
 func (w *walletService) GetWallets(ctx context.Context, filter domain.WalletFilter) ([]domain.Wallet, domain.Pagination, error) {
 	return w.repo.FindAll(ctx, filter)
 }
 
-func (s *walletService) GetWalletTransactions(ctx context.Context, address string) ([]domain.Transaction, error) {
-	filter := domain.TransactionFilter{
-		FromAddress: address,
-		Page:        1,
-		Limit:       1000,
-	}
-	txs, _, err := s.repo.GetTransactions(ctx, filter)
+func (s *walletService) GetWalletTransactions(ctx context.Context, address string, pg *domain.Pagination) ([]domain.Transaction, domain.Pagination, error) {
+	txs, p, err := s.repo.GetTransactions(ctx, address, pg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get wallet transactions: %w", err)
+		return nil, domain.Pagination{}, fmt.Errorf("failed to get wallet transactions: %w", err)
 	}
-	return txs, nil
+
+	return txs, p, nil
 }

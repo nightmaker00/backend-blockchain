@@ -5,6 +5,33 @@ import (
 	"strconv"
 )
 
+/*
+{
+	"visible": true,
+	"txID": "206f27f1bd3c2cf64e363603c668f27d89cafb96532ef451e00b1d94787cb758",
+	"raw_data": {
+	  "contract": [
+		{
+		  "parameter": {
+			"value": {
+			  "amount": 1000,
+			  "owner_address": "TZ4UXDV5ZhNW7fb2AMSbgfAEZ7hWsnYS2g",
+			  "to_address": "TPswDDCAWhJAZGdHPidFg5nEf8TkNToDX1"
+			},
+			"type_url": "type.googleapis.com/protocol.TransferContract"
+		  },
+		  "type": "TransferContract"
+		}
+	  ],
+	  "ref_block_bytes": "41d2",
+	  "ref_block_hash": "669651b9e0ab76f8",
+	  "expiration": 1749056637000,
+	  "timestamp": 1749056578297
+	},
+	"raw_data_hex": "0a0241d22208669651b9e0ab76f840c89099dff3325a66080112620a2d747970652e676f6f676c65617069732e636f6d2f70726f746f636f6c2e5472616e73666572436f6e747261637412310a1541fd49eda0f23ff7ec1d03b52c3a45991c24cd440e12154198927ffb9f554dc4a453c64b2e553a02d6df514b18e80770f9c595dff332"
+  }
+*/
+
 type Transaction struct {
 	Visible bool   `json:"visible"`
 	TxID    string `json:"txID"`
@@ -26,7 +53,7 @@ type Transaction struct {
 		Timestamp     int64  `json:"timestamp"`
 	} `json:"raw_data"`
 	RawDataHex string   `json:"raw_data_hex"`
-	Signature  []string `json:"signature"`
+	Signature  []string `json:"signature,omitempty"`
 }
 
 type FlexibleFloat float64
@@ -63,8 +90,8 @@ func (f FlexibleFloat) Float64() float64 {
 }
 
 type TronScanTokensResponse struct {
-//	Total int                 `json:"total"`
-	Data  []TronScanTokenInfo `json:"data"`
+	//	Total int                 `json:"total"`
+	Data []TronScanTokenInfo `json:"data"`
 }
 
 type TronScanTokenInfo struct {
@@ -90,24 +117,24 @@ const (
 type TokenType string
 
 const (
-  TokenTypeTRX  TokenType = "TRX"
-  TokenTypeUSDT TokenType = "USDT"
+	TokenTypeTRX  TokenType = "TRX"
+	TokenTypeUSDT TokenType = "USDT"
 )
 
 type TokenConfig struct {
-  ContractAddress string
-  Decimals        int
+	ContractAddress string
+	Decimals        int
 }
 
 var TokenConfigs = map[TokenType]TokenConfig{
-  TokenTypeTRX: {
-    ContractAddress: "", 
-    Decimals:        6,  
-  },
-  TokenTypeUSDT: {
-    ContractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-    Decimals:        6,
-  },
+	TokenTypeTRX: {
+		ContractAddress: "",
+		Decimals:        6,
+	},
+	TokenTypeUSDT: {
+		ContractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+		Decimals:        6,
+	},
 }
 
 type TRC20Transaction struct {
@@ -121,5 +148,4 @@ type TRC20Transaction struct {
 	OwnerAddress     string   `json:"owner_address"`
 	RawDataHex       string   `json:"raw_data_hex"`
 	Signature        []string `json:"signature"`
-  }
-  
+}
