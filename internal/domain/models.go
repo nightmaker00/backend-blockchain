@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -46,3 +47,4 @@ type WalletsResponse struct {
 	Pagination Pagination `json:"pagination"`
 }
 
+var ErrWalletNotFound = fmt.Errorf("wallet not found")

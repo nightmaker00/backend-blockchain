@@ -4,6 +4,7 @@ package api
 import (
 	"blockchain-wallet/internal/config"
 	"blockchain-wallet/internal/domain"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -37,6 +38,16 @@ func getIntParam(c echo.Context, name string, defaultValue int) int {
 }
 
 // CreateWallet создает новый кошелек
+// @Summary Create a new wallet
+// @Description Create a new wallet with the specified kind and username
+// @ID create-wallet
+// @Accept  json
+// @Produce  json
+// @Param   wallet  body  domain.CreateWalletRequest  true  "Wallet creation request"
+// @Success 201 {object} domain.Wallet "Successfully created wallet"
+// @Failure 400 {string} string "Bad request"
+// @Failure 500 {string} string "Internal server error"
+// @Router /wallets [post]
 func (h *Handler) CreateWallet(c echo.Context) error {
 	var req domain.CreateWalletRequest
 	if err := c.Bind(&req); err != nil {
@@ -55,6 +66,17 @@ func (h *Handler) CreateWallet(c echo.Context) error {
 }
 
 // GetWallets получает список кошельков с фильтрацией
+// @Summary Get list of wallets
+// @Description Get a list of wallets with optional filtering by kind and active status
+// @ID get-wallets
+// @Produce  json
+// @Param   kind      query   string  false  "Filter by wallet kind (regular, bank)" Enums(regular, bank)
+// @Param   is_active query   bool    false  "Filter by active status"
+// @Param   page      query   int     false  "Page number" default(0)
+// @Param   limit     query   int     false  "Number of wallets per page" default(10)
+// @Success 200 {object} domain.WalletsResponse "List of wallets and pagination info"
+// @Failure 500 {string} string "Internal server error"
+// @Router /wallets [get]
 func (h *Handler) GetWallets(c echo.Context) error {
 	filter := domain.WalletFilter{
 		Kind:     c.QueryParam("kind"),
@@ -74,7 +96,17 @@ func (h *Handler) GetWallets(c echo.Context) error {
 	})
 }
 
-// CreateTransaction создает новую транзакцию
+// SendTransaction создает новую транзакцию
+// @Summary Send a transaction
+// @Description Send a transaction from one address to another
+// @ID send-transaction
+// @Accept  json
+// @Produce  json
+// @Param   transaction  body  domain.CreateTransactionRequest  true  "Transaction details"
+// @Success 201 {object} domain.Transaction "Successfully sent transaction"
+// @Failure 400 {string} string "Bad request or invalid token type"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transaction/send [post]
 func (h *Handler) SendTransaction(c echo.Context) error {
 	var req domain.CreateTransactionRequest
 	if err := c.Bind(&req); err != nil {
@@ -94,7 +126,18 @@ func (h *Handler) SendTransaction(c echo.Context) error {
 	return c.JSON(http.StatusCreated, transaction)
 }
 
-// GetTransactions получает список транзакций с фильтрацией
+// GetWalletTransactions получает список транзакций с фильтрацией
+// @Summary Get transactions for a wallet
+// @Description Get a list of transactions for a specific wallet address with pagination
+// @ID get-wallet-transactions
+// @Produce  json
+// @Param   address  path  string  true  "Wallet address"
+// @Param   page      query   int     false  "Page number" default(0)
+// @Param   limit     query   int     false  "Number of transactions per page" default(10)
+// @Success 200 {object} map[string]interface{} "List of transactions and pagination info"
+// @Failure 400 {string} string "Address is required"
+// @Failure 500 {string} string "Internal server error"
+// @Router /{address}/transactions [get]
 func (h *Handler) GetWalletTransactions(c echo.Context) error {
 	address := c.Param("address")
 	if address == "" {
@@ -118,6 +161,16 @@ func (h *Handler) GetWalletTransactions(c echo.Context) error {
 }
 
 // GetBalance получает баланс кошелька
+// @Summary Get wallet balance
+// @Description Get the balance for a specific wallet address
+// @ID get-wallet-balance
+// @Produce  json
+// @Param   address  path  string  true  "Wallet address"
+// @Success 200 {object} map[string]interface{} "Wallet balance"
+// @Failure 400 {string} string "Invalid address or address is required"
+// @Failure 404 {string} string "Wallet not found"
+// @Failure 500 {string} string "Internal server error"
+// @Router /wallets/{address}/balance [get]
 func (h *Handler) GetBalance(c echo.Context) error {
 	address := c.Param("address")
 	if address == "" {
@@ -126,6 +179,9 @@ func (h *Handler) GetBalance(c echo.Context) error {
 
 	balance, err := h.wallet.GetBalance(c.Request().Context(), address)
 	if err != nil {
+		if errors.Is(err, domain.ErrWalletNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, err.Error())
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
@@ -136,6 +192,15 @@ func (h *Handler) GetBalance(c echo.Context) error {
 }
 
 // GetTransactionStatus получает статус транзакции
+// @Summary Get transaction status
+// @Description Get the status of a specific transaction by its ID
+// @ID get-transaction-status
+// @Produce  json
+// @Param   tx_id  path  string  true  "Transaction ID"
+// @Success 200 {object} map[string]interface{} "Transaction status"
+// @Failure 400 {string} string "Transaction ID is required"
+// @Failure 500 {string} string "Internal server error"
+// @Router /transactions/{tx_id}/status [get]
 func (h *Handler) GetTransactionStatus(c echo.Context) error {
 	txID := c.Param("tx_id")
 	if txID == "" {

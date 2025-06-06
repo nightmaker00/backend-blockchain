@@ -1,0 +1,15 @@
+basePath: /api/v1
+consumes:
+    - application/json
+host: localhost:8080
+info:
+    description: API for managing blockchain wallets and transactions
+    title: Blockchain Wallet API
+    version: "1.0"
+paths: {}
+produces:
+    - application/json
+schemes:
+    - http
+    - https
+swagger: "2.0"

@@ -136,6 +136,10 @@ func (s *walletService) CreateWallet(ctx context.Context, req domain.CreateWalle
 }
 
 func (s *walletService) GetBalance(ctx context.Context, address string) (*tron.WalletBalance, error) {
+	_, err := s.repo.FindByAddress(ctx, address)
+	if err != nil {
+		return nil, domain.ErrWalletNotFound
+	}
 	return s.tc.GetBalance(ctx, address)
 }
 
