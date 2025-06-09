@@ -126,6 +126,9 @@ func (h *Handler) GetBalance(c echo.Context) error {
 
 	balance, err := h.wallet.GetBalance(c.Request().Context(), address)
 	if err != nil {
+		if err.Error() == "wallet not found" {
+			return echo.NewHTTPError(http.StatusNotFound, "Wallet not found")
+		}
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 

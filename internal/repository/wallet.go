@@ -70,7 +70,8 @@ func (r *WalletRepository) FindAll(ctx context.Context, filter domain.WalletFilt
     FROM wallet
     LIMIT $1 OFFSET $2
   `
-	offset := (filter.Page - 1) * filter.Limit
+
+	offset := filter.Page * filter.Limit
 
 	log.Printf("Executing query: %s with params: limit=%d, offset=%d", query, filter.Limit, offset)
 

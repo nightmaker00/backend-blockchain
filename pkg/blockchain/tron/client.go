@@ -42,7 +42,57 @@ func NewClient(httpClient *http.Client, apiNodeKey, apiNodeURL, scanKey, scanURL
 	}
 }
 
+// GetAccount проверяет существование TRON-аккаунта
+func (t *TronClient) GetAccount(ctx context.Context, address string) (bool, error) {
+	url := fmt.Sprintf("%s/api/account?address=%s", t.scanURL, address)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request for account existence: %w", err)
+	}
+
+	resp, err := t.httpClient.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to send request for account existence: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil // Кошелек не найден
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return false, fmt.Errorf("API request for account existence failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var accountResp struct {
+		Address string        `json:"address"`
+		Data    []interface{} `json:"data"` // Add this field to handle empty data array
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&accountResp); err != nil {
+		return false, fmt.Errorf("failed to decode account existence response: %w", err)
+	}
+
+	// TronScan returns 200 OK with an empty data array if the account doesn't exist
+	if len(accountResp.Data) == 0 {
+		return false, nil
+	}
+
+	return accountResp.Address == address, nil
+}
+
 func (t *TronClient) GetBalance(ctx context.Context, address string) (*WalletBalance, error) {
+	// Сначала проверяем существование аккаунта
+	exists, err := t.GetAccount(ctx, address)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check wallet existence: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("wallet not found") // Специальная ошибка для несуществующего кошелька
+	}
+
 	fmt.Printf("------------------here-------------------; address = %s\n", address)
 
 	url := fmt.Sprintf("%s/account/tokens?address=%s&start=0&limit=4&hidden=0&show=0&sortType=0&sortBy=0", t.scanURL, address)
