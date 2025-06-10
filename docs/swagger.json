@@ -1,0 +1,613 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API for managing blockchain wallets and transactions on TRON network.\nThis service provides functionality for creating wallets, checking balances, and sending transactions.",
+        "title": "Blockchain Wallet API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "email": "support@example.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/transaction/send": {
+            "post": {
+                "description": "Создает и отправляет транзакцию в блокчейн TRON. Поддерживает TRX и USDT токены",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Отправка транзакции",
+                "parameters": [
+                    {
+                        "description": "Данные для создания транзакции",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateTransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Созданная транзакция",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Transaction"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions/{tx_id}/status": {
+            "get": {
+                "description": "Возвращает текущий статус транзакции по её идентификатору",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Получение статуса транзакции",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор транзакции (hash)",
+                        "name": "tx_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Статус транзакции",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TransactionStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets": {
+            "get": {
+                "description": "Возвращает список кошельков с возможностью фильтрации по типу и статусу активности",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Получение списка кошельков",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Тип кошелька (regular/bank)",
+                        "name": "kind",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Статус активности кошелька",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Количество записей на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список кошельков с пагинацией",
+                        "schema": {
+                            "$ref": "#/definitions/domain.WalletsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создает новый блокчейн кошелек на TRON сети для указанного пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Создание нового кошелька",
+                "parameters": [
+                    {
+                        "description": "Данные для создания кошелька",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateWalletRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Созданный кошелек",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Wallet"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/wallets/{address}/balance": {
+            "get": {
+                "description": "Возвращает актуальный баланс TRX и USDT для указанного адреса кошелька",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "wallets"
+                ],
+                "summary": "Получение баланса кошелька",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Адрес кошелька в формате TRON",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Баланс кошелька",
+                        "schema": {
+                            "$ref": "#/definitions/domain.BalanceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "404": {
+                        "description": "Кошелек не найден",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/{address}/transactions": {
+            "get": {
+                "description": "Возвращает список транзакций для указанного адреса кошелька с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Получение транзакций кошелька",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Адрес кошелька",
+                        "name": "address",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Количество записей на странице",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список транзакций с пагинацией",
+                        "schema": {
+                            "$ref": "#/definitions/domain.TransactionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/domain.HTTPError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "domain.BalanceResponse": {
+            "description": "Ответ содержащий информацию о балансе кошелька",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "Адрес кошелька",
+                    "type": "string",
+                    "example": "TRX9sGPvkr7i3m1o..."
+                },
+                "balance": {
+                    "description": "Баланс кошелька (TRX и USDT)"
+                }
+            }
+        },
+        "domain.CreateTransactionRequest": {
+            "description": "Данные, необходимые для создания и отправки транзакции",
+            "type": "object",
+            "required": [
+                "amount",
+                "from_address",
+                "to_address",
+                "token_type"
+            ],
+            "properties": {
+                "amount": {
+                    "description": "Сумма для перевода",
+                    "type": "number",
+                    "example": 100.5
+                },
+                "from_address": {
+                    "description": "Адрес кошелька отправителя",
+                    "type": "string",
+                    "example": "TRX9sGPvkr7i3m1o..."
+                },
+                "to_address": {
+                    "description": "Адрес кошелька получателя",
+                    "type": "string",
+                    "example": "TRX8sHQmkc6i4n2p..."
+                },
+                "token_type": {
+                    "description": "Тип токена: TRX или USDT",
+                    "enum": [
+                        "TRX",
+                        "USDT"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/tron.TokenType"
+                        }
+                    ],
+                    "example": "TRX"
+                }
+            }
+        },
+        "domain.CreateWalletRequest": {
+            "description": "Данные, необходимые для создания нового блокчейн кошелька",
+            "type": "object",
+            "required": [
+                "kind",
+                "username"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Тип кошелька: regular или bank",
+                    "type": "string",
+                    "example": "regular"
+                },
+                "username": {
+                    "description": "Имя пользователя владельца кошелька",
+                    "type": "string",
+                    "example": "user123"
+                }
+            }
+        },
+        "domain.HTTPError": {
+            "description": "Структура ошибки HTTP ответа",
+            "type": "object",
+            "properties": {
+                "message": {
+                    "description": "Сообщение об ошибке",
+                    "type": "string",
+                    "example": "Произошла ошибка"
+                }
+            }
+        },
+        "domain.Pagination": {
+            "description": "Метаданные пагинации для списочных запросов",
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "Количество записей на странице",
+                    "type": "integer",
+                    "example": 10
+                },
+                "page": {
+                    "description": "Текущая страница",
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "description": "Общее количество записей",
+                    "type": "integer",
+                    "example": 100
+                }
+            }
+        },
+        "domain.Transaction": {
+            "description": "Структура транзакции с детальной информацией о переводе",
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "description": "Сумма перевода",
+                    "type": "number",
+                    "example": 100.5
+                },
+                "confirmations": {
+                    "description": "Количество подтверждений",
+                    "type": "integer",
+                    "example": 12
+                },
+                "created_at": {
+                    "description": "Дата создания",
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                },
+                "from_address": {
+                    "description": "Адрес отправителя",
+                    "type": "string",
+                    "example": "TRX9sGPvkr7i3m1o..."
+                },
+                "hash": {
+                    "description": "Хеш транзакции в блокчейне",
+                    "type": "string",
+                    "example": "a1b2c3d4e5f6..."
+                },
+                "status": {
+                    "description": "Статус транзакции (pending, confirmed, failed)",
+                    "type": "string",
+                    "example": "confirmed"
+                },
+                "to_address": {
+                    "description": "Адрес получателя",
+                    "type": "string",
+                    "example": "TRX8sHQmkc6i4n2p..."
+                },
+                "updated_at": {
+                    "description": "Дата последнего обновления",
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                }
+            }
+        },
+        "domain.TransactionStatusResponse": {
+            "description": "Ответ содержащий статус транзакции",
+            "type": "object",
+            "properties": {
+                "status": {
+                    "description": "Статус транзакции",
+                    "type": "string",
+                    "example": "confirmed"
+                },
+                "tx_id": {
+                    "description": "Идентификатор транзакции",
+                    "type": "string",
+                    "example": "a1b2c3d4e5f6..."
+                }
+            }
+        },
+        "domain.TransactionsResponse": {
+            "description": "Ответ содержащий список транзакций с пагинацией",
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "description": "Информация о пагинации",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Pagination"
+                        }
+                    ]
+                },
+                "transactions": {
+                    "description": "Список транзакций",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Transaction"
+                    }
+                }
+            }
+        },
+        "domain.Wallet": {
+            "description": "Структура блокчейн кошелька с ключами и метаданными",
+            "type": "object",
+            "properties": {
+                "address": {
+                    "description": "Адрес кошелька в сети TRON",
+                    "type": "string",
+                    "example": "TRX9sGPvkr7i3m1o..."
+                },
+                "created_at": {
+                    "description": "Дата создания",
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                },
+                "is_active": {
+                    "description": "Статус активности кошелька",
+                    "type": "boolean",
+                    "example": true
+                },
+                "kind": {
+                    "description": "Тип кошелька (regular/bank)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.WalletKind"
+                        }
+                    ],
+                    "example": "regular"
+                },
+                "private_key": {
+                    "description": "Приватный ключ кошелька (конфиденциально)",
+                    "type": "string",
+                    "example": "0xabcdef1234567890..."
+                },
+                "public_key": {
+                    "description": "Публичный ключ кошелька",
+                    "type": "string",
+                    "example": "0x1234567890abcdef..."
+                },
+                "seed_phrase": {
+                    "description": "Мнемоническая фраза для восстановления",
+                    "type": "string",
+                    "example": "word1 word2 word3..."
+                },
+                "updated_at": {
+                    "description": "Дата последнего обновления",
+                    "type": "string",
+                    "example": "2023-01-01T12:00:00Z"
+                },
+                "username": {
+                    "description": "Имя пользователя владельца",
+                    "type": "string",
+                    "example": "user123"
+                }
+            }
+        },
+        "domain.WalletKind": {
+            "type": "string",
+            "enum": [
+                "regular",
+                "bank"
+            ],
+            "x-enum-varnames": [
+                "WalletKindRegular",
+                "WalletKindBank"
+            ]
+        },
+        "domain.WalletsResponse": {
+            "description": "Ответ API содержащий список кошельков и информацию о пагинации",
+            "type": "object",
+            "properties": {
+                "pagination": {
+                    "description": "Информация о пагинации",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.Pagination"
+                        }
+                    ]
+                },
+                "wallets": {
+                    "description": "Список кошельков",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Wallet"
+                    }
+                }
+            }
+        },
+        "tron.TokenType": {
+            "type": "string",
+            "enum": [
+                "TRX",
+                "USDT"
+            ],
+            "x-enum-varnames": [
+                "TokenTypeTRX",
+                "TokenTypeUSDT"
+            ]
+        }
+    }
+}

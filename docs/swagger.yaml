@@ -1,0 +1,430 @@
+basePath: /api/v1
+definitions:
+  domain.BalanceResponse:
+    description: Ответ содержащий информацию о балансе кошелька
+    properties:
+      address:
+        description: Адрес кошелька
+        example: TRX9sGPvkr7i3m1o...
+        type: string
+      balance:
+        description: Баланс кошелька (TRX и USDT)
+    type: object
+  domain.CreateTransactionRequest:
+    description: Данные, необходимые для создания и отправки транзакции
+    properties:
+      amount:
+        description: Сумма для перевода
+        example: 100.5
+        type: number
+      from_address:
+        description: Адрес кошелька отправителя
+        example: TRX9sGPvkr7i3m1o...
+        type: string
+      to_address:
+        description: Адрес кошелька получателя
+        example: TRX8sHQmkc6i4n2p...
+        type: string
+      token_type:
+        allOf:
+        - $ref: '#/definitions/tron.TokenType'
+        description: 'Тип токена: TRX или USDT'
+        enum:
+        - TRX
+        - USDT
+        example: TRX
+    required:
+    - amount
+    - from_address
+    - to_address
+    - token_type
+    type: object
+  domain.CreateWalletRequest:
+    description: Данные, необходимые для создания нового блокчейн кошелька
+    properties:
+      kind:
+        description: 'Тип кошелька: regular или bank'
+        example: regular
+        type: string
+      username:
+        description: Имя пользователя владельца кошелька
+        example: user123
+        type: string
+    required:
+    - kind
+    - username
+    type: object
+  domain.HTTPError:
+    description: Структура ошибки HTTP ответа
+    properties:
+      message:
+        description: Сообщение об ошибке
+        example: Произошла ошибка
+        type: string
+    type: object
+  domain.Pagination:
+    description: Метаданные пагинации для списочных запросов
+    properties:
+      limit:
+        description: Количество записей на странице
+        example: 10
+        type: integer
+      page:
+        description: Текущая страница
+        example: 0
+        type: integer
+      total:
+        description: Общее количество записей
+        example: 100
+        type: integer
+    type: object
+  domain.Transaction:
+    description: Структура транзакции с детальной информацией о переводе
+    properties:
+      amount:
+        description: Сумма перевода
+        example: 100.5
+        type: number
+      confirmations:
+        description: Количество подтверждений
+        example: 12
+        type: integer
+      created_at:
+        description: Дата создания
+        example: "2023-01-01T12:00:00Z"
+        type: string
+      from_address:
+        description: Адрес отправителя
+        example: TRX9sGPvkr7i3m1o...
+        type: string
+      hash:
+        description: Хеш транзакции в блокчейне
+        example: a1b2c3d4e5f6...
+        type: string
+      status:
+        description: Статус транзакции (pending, confirmed, failed)
+        example: confirmed
+        type: string
+      to_address:
+        description: Адрес получателя
+        example: TRX8sHQmkc6i4n2p...
+        type: string
+      updated_at:
+        description: Дата последнего обновления
+        example: "2023-01-01T12:00:00Z"
+        type: string
+    type: object
+  domain.TransactionStatusResponse:
+    description: Ответ содержащий статус транзакции
+    properties:
+      status:
+        description: Статус транзакции
+        example: confirmed
+        type: string
+      tx_id:
+        description: Идентификатор транзакции
+        example: a1b2c3d4e5f6...
+        type: string
+    type: object
+  domain.TransactionsResponse:
+    description: Ответ содержащий список транзакций с пагинацией
+    properties:
+      pagination:
+        allOf:
+        - $ref: '#/definitions/domain.Pagination'
+        description: Информация о пагинации
+      transactions:
+        description: Список транзакций
+        items:
+          $ref: '#/definitions/domain.Transaction'
+        type: array
+    type: object
+  domain.Wallet:
+    description: Структура блокчейн кошелька с ключами и метаданными
+    properties:
+      address:
+        description: Адрес кошелька в сети TRON
+        example: TRX9sGPvkr7i3m1o...
+        type: string
+      created_at:
+        description: Дата создания
+        example: "2023-01-01T12:00:00Z"
+        type: string
+      is_active:
+        description: Статус активности кошелька
+        example: true
+        type: boolean
+      kind:
+        allOf:
+        - $ref: '#/definitions/domain.WalletKind'
+        description: Тип кошелька (regular/bank)
+        example: regular
+      private_key:
+        description: Приватный ключ кошелька (конфиденциально)
+        example: 0xabcdef1234567890...
+        type: string
+      public_key:
+        description: Публичный ключ кошелька
+        example: 0x1234567890abcdef...
+        type: string
+      seed_phrase:
+        description: Мнемоническая фраза для восстановления
+        example: word1 word2 word3...
+        type: string
+      updated_at:
+        description: Дата последнего обновления
+        example: "2023-01-01T12:00:00Z"
+        type: string
+      username:
+        description: Имя пользователя владельца
+        example: user123
+        type: string
+    type: object
+  domain.WalletKind:
+    enum:
+    - regular
+    - bank
+    type: string
+    x-enum-varnames:
+    - WalletKindRegular
+    - WalletKindBank
+  domain.WalletsResponse:
+    description: Ответ API содержащий список кошельков и информацию о пагинации
+    properties:
+      pagination:
+        allOf:
+        - $ref: '#/definitions/domain.Pagination'
+        description: Информация о пагинации
+      wallets:
+        description: Список кошельков
+        items:
+          $ref: '#/definitions/domain.Wallet'
+        type: array
+    type: object
+  tron.TokenType:
+    enum:
+    - TRX
+    - USDT
+    type: string
+    x-enum-varnames:
+    - TokenTypeTRX
+    - TokenTypeUSDT
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: API Support
+  description: |-
+    API for managing blockchain wallets and transactions on TRON network.
+    This service provides functionality for creating wallets, checking balances, and sending transactions.
+  license:
+    name: MIT
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Blockchain Wallet API
+  version: "1.0"
+paths:
+  /{address}/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список транзакций для указанного адреса кошелька с пагинацией
+      parameters:
+      - description: Адрес кошелька
+        in: path
+        name: address
+        required: true
+        type: string
+      - default: 10
+        description: Количество записей на странице
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список транзакций с пагинацией
+          schema:
+            $ref: '#/definitions/domain.TransactionsResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Получение транзакций кошелька
+      tags:
+      - transactions
+  /transaction/send:
+    post:
+      consumes:
+      - application/json
+      description: Создает и отправляет транзакцию в блокчейн TRON. Поддерживает TRX
+        и USDT токены
+      parameters:
+      - description: Данные для создания транзакции
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданная транзакция
+          schema:
+            $ref: '#/definitions/domain.Transaction'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Отправка транзакции
+      tags:
+      - transactions
+  /transactions/{tx_id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает текущий статус транзакции по её идентификатору
+      parameters:
+      - description: Идентификатор транзакции (hash)
+        in: path
+        name: tx_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус транзакции
+          schema:
+            $ref: '#/definitions/domain.TransactionStatusResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Получение статуса транзакции
+      tags:
+      - transactions
+  /wallets:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список кошельков с возможностью фильтрации по типу и
+        статусу активности
+      parameters:
+      - description: Тип кошелька (regular/bank)
+        in: query
+        name: kind
+        type: string
+      - description: Статус активности кошелька
+        in: query
+        name: is_active
+        type: boolean
+      - default: 0
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Количество записей на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список кошельков с пагинацией
+          schema:
+            $ref: '#/definitions/domain.WalletsResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Получение списка кошельков
+      tags:
+      - wallets
+    post:
+      consumes:
+      - application/json
+      description: Создает новый блокчейн кошелек на TRON сети для указанного пользователя
+      parameters:
+      - description: Данные для создания кошелька
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateWalletRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданный кошелек
+          schema:
+            $ref: '#/definitions/domain.Wallet'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Создание нового кошелька
+      tags:
+      - wallets
+  /wallets/{address}/balance:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает актуальный баланс TRX и USDT для указанного адреса кошелька
+      parameters:
+      - description: Адрес кошелька в формате TRON
+        in: path
+        name: address
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Баланс кошелька
+          schema:
+            $ref: '#/definitions/domain.BalanceResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "404":
+          description: Кошелек не найден
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/domain.HTTPError'
+      summary: Получение баланса кошелька
+      tags:
+      - wallets
+schemes:
+- http
+- https
+swagger: "2.0"

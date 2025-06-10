@@ -37,6 +37,16 @@ func getIntParam(c echo.Context, name string, defaultValue int) int {
 }
 
 // CreateWallet создает новый кошелек
+// @Summary      Создание нового кошелька
+// @Description  Создает новый блокчейн кошелек на TRON сети для указанного пользователя
+// @Tags         wallets
+// @Accept       json
+// @Produce      json
+// @Param        request  body      domain.CreateWalletRequest  true  "Данные для создания кошелька"
+// @Success      201      {object}  domain.Wallet               "Созданный кошелек"
+// @Failure      400      {object}  domain.HTTPError            "Некорректный запрос"
+// @Failure      500      {object}  domain.HTTPError            "Внутренняя ошибка сервера"
+// @Router       /wallets [post]
 func (h *Handler) CreateWallet(c echo.Context) error {
 	var req domain.CreateWalletRequest
 	if err := c.Bind(&req); err != nil {
@@ -55,6 +65,18 @@ func (h *Handler) CreateWallet(c echo.Context) error {
 }
 
 // GetWallets получает список кошельков с фильтрацией
+// @Summary      Получение списка кошельков
+// @Description  Возвращает список кошельков с возможностью фильтрации по типу и статусу активности
+// @Tags         wallets
+// @Accept       json
+// @Produce      json
+// @Param        kind      query     string  false  "Тип кошелька (regular/bank)"
+// @Param        is_active query     boolean false  "Статус активности кошелька"
+// @Param        page      query     int     false  "Номер страницы" default(0)
+// @Param        limit     query     int     false  "Количество записей на странице" default(10)
+// @Success      200       {object}  domain.WalletsResponse      "Список кошельков с пагинацией"
+// @Failure      500       {object}  domain.HTTPError            "Внутренняя ошибка сервера"
+// @Router       /wallets [get]
 func (h *Handler) GetWallets(c echo.Context) error {
 	filter := domain.WalletFilter{
 		Kind:     c.QueryParam("kind"),
@@ -74,7 +96,17 @@ func (h *Handler) GetWallets(c echo.Context) error {
 	})
 }
 
-// CreateTransaction создает новую транзакцию
+// SendTransaction создает новую транзакцию
+// @Summary      Отправка транзакции
+// @Description  Создает и отправляет транзакцию в блокчейн TRON. Поддерживает TRX и USDT токены
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        request  body      domain.CreateTransactionRequest  true  "Данные для создания транзакции"
+// @Success      201      {object}  domain.Transaction                "Созданная транзакция"
+// @Failure      400      {object}  domain.HTTPError                 "Некорректный запрос"
+// @Failure      500      {object}  domain.HTTPError                 "Внутренняя ошибка сервера"
+// @Router       /transaction/send [post]
 func (h *Handler) SendTransaction(c echo.Context) error {
 	var req domain.CreateTransactionRequest
 	if err := c.Bind(&req); err != nil {
@@ -94,7 +126,19 @@ func (h *Handler) SendTransaction(c echo.Context) error {
 	return c.JSON(http.StatusCreated, transaction)
 }
 
-// GetTransactions получает список транзакций с фильтрацией
+// GetWalletTransactions получает список транзакций с фильтрацией
+// @Summary      Получение транзакций кошелька
+// @Description  Возвращает список транзакций для указанного адреса кошелька с пагинацией
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        address   path      string  true   "Адрес кошелька"
+// @Param        limit     query     int     false  "Количество записей на странице" default(10)
+// @Param        page      query     int     false  "Номер страницы" default(0)
+// @Success      200       {object}  domain.TransactionsResponse     "Список транзакций с пагинацией"
+// @Failure      400       {object}  domain.HTTPError                "Некорректный запрос"
+// @Failure      500       {object}  domain.HTTPError                "Внутренняя ошибка сервера"
+// @Router       /{address}/transactions [get]
 func (h *Handler) GetWalletTransactions(c echo.Context) error {
 	address := c.Param("address")
 	if address == "" {
@@ -111,13 +155,24 @@ func (h *Handler) GetWalletTransactions(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"transactions": transactions,
-		"pagination":   p,
+	return c.JSON(http.StatusOK, domain.TransactionsResponse{
+		Transactions: transactions,
+		Pagination:   p,
 	})
 }
 
 // GetBalance получает баланс кошелька
+// @Summary      Получение баланса кошелька
+// @Description  Возвращает актуальный баланс TRX и USDT для указанного адреса кошелька
+// @Tags         wallets
+// @Accept       json
+// @Produce      json
+// @Param        address   path      string  true  "Адрес кошелька в формате TRON"
+// @Success      200       {object}  domain.BalanceResponse      "Баланс кошелька"
+// @Failure      400       {object}  domain.HTTPError            "Некорректный запрос"
+// @Failure      404       {object}  domain.HTTPError            "Кошелек не найден"
+// @Failure      500       {object}  domain.HTTPError            "Внутренняя ошибка сервера"
+// @Router       /wallets/{address}/balance [get]
 func (h *Handler) GetBalance(c echo.Context) error {
 	address := c.Param("address")
 	if address == "" {
@@ -132,13 +187,23 @@ func (h *Handler) GetBalance(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"address": address,
-		"balance": balance,
+	return c.JSON(http.StatusOK, domain.BalanceResponse{
+		Address: address,
+		Balance: balance,
 	})
 }
 
 // GetTransactionStatus получает статус транзакции
+// @Summary      Получение статуса транзакции
+// @Description  Возвращает текущий статус транзакции по её идентификатору
+// @Tags         transactions
+// @Accept       json
+// @Produce      json
+// @Param        tx_id     path      string  true  "Идентификатор транзакции (hash)"
+// @Success      200       {object}  domain.TransactionStatusResponse  "Статус транзакции"
+// @Failure      400       {object}  domain.HTTPError                  "Некорректный запрос"
+// @Failure      500       {object}  domain.HTTPError                  "Внутренняя ошибка сервера"
+// @Router       /transactions/{tx_id}/status [get]
 func (h *Handler) GetTransactionStatus(c echo.Context) error {
 	txID := c.Param("tx_id")
 	if txID == "" {
@@ -150,9 +215,9 @@ func (h *Handler) GetTransactionStatus(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"tx_id":  txID,
-		"status": status,
+	return c.JSON(http.StatusOK, domain.TransactionStatusResponse{
+		TxID:   txID,
+		Status: status,
 	})
 }
 

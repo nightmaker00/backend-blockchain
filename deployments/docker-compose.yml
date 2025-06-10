@@ -3,34 +3,40 @@ version: "3"
 services:
   postgres:
     image: postgres:15
+    container_name: blockchain-wallet-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: blockchain_wallet 
+      POSTGRES_DB: blockchain_wallet
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./migrations:/migrations
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - blockchain-network
 
   migrate:
     image: migrate/migrate
     volumes:
       - ../migrations:/migrations
-    command: ["-path", "/migrations", "-database", "postgres://postgres:postgres@postgres:5432/blockchain_wallet?sslmode=disable", "up"]
+    command: [ "-path", "/migrations", "-database", "postgres://postgres:postgres@postgres:5432/blockchain_wallet?sslmode=disable", "up" ]
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - blockchain-network
 
   api:
     build:
       context: ..
       dockerfile: deployments/Dockerfile
+    container_name: blockchain-wallet-api
     ports:
       - "8080:8080"
     environment:
@@ -47,7 +53,13 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks:
+      - blockchain-network
 
 volumes:
   postgres_data:
 
+
+networks:
+  blockchain-network:
+    driver: bridge
